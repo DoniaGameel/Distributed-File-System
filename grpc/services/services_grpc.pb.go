@@ -19,89 +19,89 @@ import (
 const _ = grpc.SupportPackageIsVersion7
 
 const (
-	HeartbeatService_Ping_FullMethodName = "/services.HeartbeatService/Ping"
+	Services_Ping_FullMethodName = "/services.Services/Ping"
 )
 
-// HeartbeatServiceClient is the client API for HeartbeatService service.
+// ServicesClient is the client API for Services service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
-type HeartbeatServiceClient interface {
+type ServicesClient interface {
 	Ping(ctx context.Context, in *HeartbeatRequest, opts ...grpc.CallOption) (*HeartbeatResponse, error)
 }
 
-type heartbeatServiceClient struct {
+type servicesClient struct {
 	cc grpc.ClientConnInterface
 }
 
-func NewHeartbeatServiceClient(cc grpc.ClientConnInterface) HeartbeatServiceClient {
-	return &heartbeatServiceClient{cc}
+func NewServicesClient(cc grpc.ClientConnInterface) ServicesClient {
+	return &servicesClient{cc}
 }
 
-func (c *heartbeatServiceClient) Ping(ctx context.Context, in *HeartbeatRequest, opts ...grpc.CallOption) (*HeartbeatResponse, error) {
+func (c *servicesClient) Ping(ctx context.Context, in *HeartbeatRequest, opts ...grpc.CallOption) (*HeartbeatResponse, error) {
 	out := new(HeartbeatResponse)
-	err := c.cc.Invoke(ctx, HeartbeatService_Ping_FullMethodName, in, out, opts...)
+	err := c.cc.Invoke(ctx, Services_Ping_FullMethodName, in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-// HeartbeatServiceServer is the server API for HeartbeatService service.
-// All implementations must embed UnimplementedHeartbeatServiceServer
+// ServicesServer is the server API for Services service.
+// All implementations must embed UnimplementedServicesServer
 // for forward compatibility
-type HeartbeatServiceServer interface {
+type ServicesServer interface {
 	Ping(context.Context, *HeartbeatRequest) (*HeartbeatResponse, error)
-	mustEmbedUnimplementedHeartbeatServiceServer()
+	mustEmbedUnimplementedServicesServer()
 }
 
-// UnimplementedHeartbeatServiceServer must be embedded to have forward compatible implementations.
-type UnimplementedHeartbeatServiceServer struct {
+// UnimplementedServicesServer must be embedded to have forward compatible implementations.
+type UnimplementedServicesServer struct {
 }
 
-func (UnimplementedHeartbeatServiceServer) Ping(context.Context, *HeartbeatRequest) (*HeartbeatResponse, error) {
+func (UnimplementedServicesServer) Ping(context.Context, *HeartbeatRequest) (*HeartbeatResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Ping not implemented")
 }
-func (UnimplementedHeartbeatServiceServer) mustEmbedUnimplementedHeartbeatServiceServer() {}
+func (UnimplementedServicesServer) mustEmbedUnimplementedServicesServer() {}
 
-// UnsafeHeartbeatServiceServer may be embedded to opt out of forward compatibility for this service.
-// Use of this interface is not recommended, as added methods to HeartbeatServiceServer will
+// UnsafeServicesServer may be embedded to opt out of forward compatibility for this service.
+// Use of this interface is not recommended, as added methods to ServicesServer will
 // result in compilation errors.
-type UnsafeHeartbeatServiceServer interface {
-	mustEmbedUnimplementedHeartbeatServiceServer()
+type UnsafeServicesServer interface {
+	mustEmbedUnimplementedServicesServer()
 }
 
-func RegisterHeartbeatServiceServer(s grpc.ServiceRegistrar, srv HeartbeatServiceServer) {
-	s.RegisterService(&HeartbeatService_ServiceDesc, srv)
+func RegisterServicesServer(s grpc.ServiceRegistrar, srv ServicesServer) {
+	s.RegisterService(&Services_ServiceDesc, srv)
 }
 
-func _HeartbeatService_Ping_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _Services_Ping_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(HeartbeatRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(HeartbeatServiceServer).Ping(ctx, in)
+		return srv.(ServicesServer).Ping(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: HeartbeatService_Ping_FullMethodName,
+		FullMethod: Services_Ping_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(HeartbeatServiceServer).Ping(ctx, req.(*HeartbeatRequest))
+		return srv.(ServicesServer).Ping(ctx, req.(*HeartbeatRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-// HeartbeatService_ServiceDesc is the grpc.ServiceDesc for HeartbeatService service.
+// Services_ServiceDesc is the grpc.ServiceDesc for Services service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
-var HeartbeatService_ServiceDesc = grpc.ServiceDesc{
-	ServiceName: "services.HeartbeatService",
-	HandlerType: (*HeartbeatServiceServer)(nil),
+var Services_ServiceDesc = grpc.ServiceDesc{
+	ServiceName: "services.Services",
+	HandlerType: (*ServicesServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
 			MethodName: "Ping",
-			Handler:    _HeartbeatService_Ping_Handler,
+			Handler:    _Services_Ping_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

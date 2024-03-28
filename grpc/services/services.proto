@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-option go_package = "Lab1/services";
+option go_package = "wireless_lab_1/grpc/services";
 
 package services;
 
@@ -9,10 +9,10 @@ message HeartbeatRequest {
 }
 
 message HeartbeatResponse {
-    bool is_alive = 1;
+   
 }
 
 // Add HeartbeatService
-service HeartbeatService {
+service Services {
     rpc Ping(HeartbeatRequest) returns (HeartbeatResponse);
 }

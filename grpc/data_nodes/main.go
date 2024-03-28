@@ -1,53 +1,34 @@
 package main
 
-// Import the generated package
 import (
-	pb "Lab1/services" // Import the generated package
-	"context"
+    "context"
+    "log"
 	"fmt"
-	"net"
-	"time"
-
-	"google.golang.org/grpc"
+    "google.golang.org/grpc"
+    pb "wireless_lab_1/grpc/services" // Import the generated code
 )
 
-type heartBeatServer struct {
-	pb.UnimplementedHeartbeatServiceServer
-}
-
-func (s *heartBeatServer) HeartBeat(ctx context.Context, req *pb.HeartbeatRequest) (*pb.HeartbeatResponse, error) {
-	return &pb.HeartbeatResponse{IsAlive: true}, nil
-}
-// Function to send "still alive" messages every 1 second
-func sendStillAliveMessages(stream pb.HeartbeatService_PingServer, done <-chan struct{}) {
-	ticker := time.NewTicker(time.Second)
-	defer ticker.Stop()
-
-	for {
-		select {
-		case <-done:
-			return
-		case <-ticker.C:
-			// Send "still alive" message
-			err := stream.Send(&pb.HeartbeatResponse{IsAlive: true})
-			if err != nil {
-				fmt.Println("Error sending 'still alive' message:", err)
-				return
-			}
-		}
-	}
-}
-
 func main() {
-	lis, err := net.Listen("tcp", ":8080")
-	if err != nil {
-		fmt.Println("failed to listen:", err)
+    // Set up a connection to the gRPC server.
+    conn, err := grpc.Dial("localhost:8080", grpc.WithInsecure())
+    if err != nil {
+		fmt.Println("did not connect:", err)
 		return
 	}
-	s := grpc.NewServer()
-	pb.RegisterHeartbeatServiceServer(s, &heartBeatServer{})
-	fmt.Println("Server started. Listening on port 8080...")
-	if err := s.Serve(lis); err != nil {
-		fmt.Println("failed to serve:", err)
-	}
+    defer conn.Close()
+    // Create a gRPC client
+    client := pb.NewServicesClient(conn)
+
+    // Call the Ping function
+    response, err := client.Ping(context.Background(), &pb.HeartbeatRequest{DataNodeId: "1"})
+    if err != nil {
+        log.Fatalf("Error calling Ping: %v", err)
+    }
+
+    // Process the response
+    if response.IsAlive {
+        log.Println("Server is alive")
+    } else {
+        log.Println("Server is not alive")
+    }
 }
