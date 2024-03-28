@@ -1,0 +1,18 @@
+syntax = "proto3";
+
+option go_package = "Lab1/services";
+
+package services;
+
+message HeartbeatRequest {
+    string data_node_id = 1;
+}
+
+message HeartbeatResponse {
+    bool is_alive = 1;
+}
+
+// Add HeartbeatService
+service HeartbeatService {
+    rpc Ping(HeartbeatRequest) returns (HeartbeatResponse);
+}
