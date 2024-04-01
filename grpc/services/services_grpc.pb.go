@@ -19,14 +19,16 @@ import (
 const _ = grpc.SupportPackageIsVersion7
 
 const (
-	Services_Ping_FullMethodName = "/services.Services/Ping"
+	Services_TrackHeartbeat_FullMethodName = "/services.Services/TrackHeartbeat"
+	Services_Hello_FullMethodName          = "/services.Services/Hello"
 )
 
 // ServicesClient is the client API for Services service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type ServicesClient interface {
-	Ping(ctx context.Context, in *HeartbeatRequest, opts ...grpc.CallOption) (*HeartbeatResponse, error)
+	TrackHeartbeat(ctx context.Context, opts ...grpc.CallOption) (Services_TrackHeartbeatClient, error)
+	Hello(ctx context.Context, in *TextRequest, opts ...grpc.CallOption) (*TextResponse, error)
 }
 
 type servicesClient struct {
@@ -37,9 +39,40 @@ func NewServicesClient(cc grpc.ClientConnInterface) ServicesClient {
 	return &servicesClient{cc}
 }
 
-func (c *servicesClient) Ping(ctx context.Context, in *HeartbeatRequest, opts ...grpc.CallOption) (*HeartbeatResponse, error) {
-	out := new(HeartbeatResponse)
-	err := c.cc.Invoke(ctx, Services_Ping_FullMethodName, in, out, opts...)
+func (c *servicesClient) TrackHeartbeat(ctx context.Context, opts ...grpc.CallOption) (Services_TrackHeartbeatClient, error) {
+	stream, err := c.cc.NewStream(ctx, &Services_ServiceDesc.Streams[0], Services_TrackHeartbeat_FullMethodName, opts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &servicesTrackHeartbeatClient{stream}
+	return x, nil
+}
+
+type Services_TrackHeartbeatClient interface {
+	Send(*HeartbeatRequest) error
+	Recv() (*HeartbeatResponse, error)
+	grpc.ClientStream
+}
+
+type servicesTrackHeartbeatClient struct {
+	grpc.ClientStream
+}
+
+func (x *servicesTrackHeartbeatClient) Send(m *HeartbeatRequest) error {
+	return x.ClientStream.SendMsg(m)
+}
+
+func (x *servicesTrackHeartbeatClient) Recv() (*HeartbeatResponse, error) {
+	m := new(HeartbeatResponse)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
+func (c *servicesClient) Hello(ctx context.Context, in *TextRequest, opts ...grpc.CallOption) (*TextResponse, error) {
+	out := new(TextResponse)
+	err := c.cc.Invoke(ctx, Services_Hello_FullMethodName, in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -50,7 +83,8 @@ func (c *servicesClient) Ping(ctx context.Context, in *HeartbeatRequest, opts ..
 // All implementations must embed UnimplementedServicesServer
 // for forward compatibility
 type ServicesServer interface {
-	Ping(context.Context, *HeartbeatRequest) (*HeartbeatResponse, error)
+	TrackHeartbeat(Services_TrackHeartbeatServer) error
+	Hello(context.Context, *TextRequest) (*TextResponse, error)
 	mustEmbedUnimplementedServicesServer()
 }
 
@@ -58,8 +92,11 @@ type ServicesServer interface {
 type UnimplementedServicesServer struct {
 }
 
-func (UnimplementedServicesServer) Ping(context.Context, *HeartbeatRequest) (*HeartbeatResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method Ping not implemented")
+func (UnimplementedServicesServer) TrackHeartbeat(Services_TrackHeartbeatServer) error {
+	return status.Errorf(codes.Unimplemented, "method TrackHeartbeat not implemented")
+}
+func (UnimplementedServicesServer) Hello(context.Context, *TextRequest) (*TextResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Hello not implemented")
 }
 func (UnimplementedServicesServer) mustEmbedUnimplementedServicesServer() {}
 
@@ -74,20 +111,46 @@ func RegisterServicesServer(s grpc.ServiceRegistrar, srv ServicesServer) {
 	s.RegisterService(&Services_ServiceDesc, srv)
 }
 
-func _Services_Ping_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(HeartbeatRequest)
+func _Services_TrackHeartbeat_Handler(srv interface{}, stream grpc.ServerStream) error {
+	return srv.(ServicesServer).TrackHeartbeat(&servicesTrackHeartbeatServer{stream})
+}
+
+type Services_TrackHeartbeatServer interface {
+	Send(*HeartbeatResponse) error
+	Recv() (*HeartbeatRequest, error)
+	grpc.ServerStream
+}
+
+type servicesTrackHeartbeatServer struct {
+	grpc.ServerStream
+}
+
+func (x *servicesTrackHeartbeatServer) Send(m *HeartbeatResponse) error {
+	return x.ServerStream.SendMsg(m)
+}
+
+func (x *servicesTrackHeartbeatServer) Recv() (*HeartbeatRequest, error) {
+	m := new(HeartbeatRequest)
+	if err := x.ServerStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
+func _Services_Hello_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(TextRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(ServicesServer).Ping(ctx, in)
+		return srv.(ServicesServer).Hello(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: Services_Ping_FullMethodName,
+		FullMethod: Services_Hello_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ServicesServer).Ping(ctx, req.(*HeartbeatRequest))
+		return srv.(ServicesServer).Hello(ctx, req.(*TextRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -100,10 +163,17 @@ var Services_ServiceDesc = grpc.ServiceDesc{
 	HandlerType: (*ServicesServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
-			MethodName: "Ping",
-			Handler:    _Services_Ping_Handler,
+			MethodName: "Hello",
+			Handler:    _Services_Hello_Handler,
 		},
 	},
-	Streams:  []grpc.StreamDesc{},
+	Streams: []grpc.StreamDesc{
+		{
+			StreamName:    "TrackHeartbeat",
+			Handler:       _Services_TrackHeartbeat_Handler,
+			ServerStreams: true,
+			ClientStreams: true,
+		},
+	},
 	Metadata: "services.proto",
 }

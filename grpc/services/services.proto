@@ -4,15 +4,24 @@ option go_package = "wireless_lab_1/grpc/services";
 
 package services;
 
-message HeartbeatRequest {
-    string data_node_id = 1;
+message TextRequest {
+    string text = 1;
+}
+
+message TextResponse {
+    string capitalized_text = 1;
+}
+
+message HeartbeatRequest{
+    string node_id = 1;
 }
 
 message HeartbeatResponse {
-   
 }
 
-// Add HeartbeatService
 service Services {
-    rpc Ping(HeartbeatRequest) returns (HeartbeatResponse);
+    rpc TrackHeartbeat (stream HeartbeatRequest) returns (stream HeartbeatResponse) {}
+    rpc Hello(TextRequest) returns (TextResponse);
 }
+
+
