@@ -39,6 +39,11 @@ func (s *masterServer) TrackHeartbeat(stream pb.Services_TrackHeartbeatServer) e
 		}
 		text := req.GetNodeId()
 		fmt.Println("Node ID:", text)
+
+		// Send a HeartbeatResponse back to the Data Keeper node
+        if err := stream.Send(&pb.HeartbeatResponse{}); err != nil {
+            return err
+        }
 	}
 }
 

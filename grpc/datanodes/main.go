@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"time"
 
 	pb "wireless_lab_1/grpc/services" // Import the generated package
 
@@ -18,26 +19,30 @@ func main() {
 	defer conn.Close()
 	c := pb.NewServicesClient(conn)
 
-	// Call the RPC HeartBeat method
-	stream, err := c.TrackHeartbeat(context.Background())
-	if err != nil {
-		fmt.Println("Error calling TrackHeartbeat:", err)
-		return
-	}
+	// Start a ticker that triggers sending heartbeat every 1 second
+	ticker := time.NewTicker(1 * time.Second)
+	defer ticker.Stop()
 
-	// Send the request
-	err = stream.Send(&pb.HeartbeatRequest{NodeId: "1000"})
-	if err != nil {
-		fmt.Println("Error sending HeartbeatRequest:", err)
-		return
-	}
+	for range ticker.C {
+		// Call the RPC HeartBeat method
+		stream, err := c.TrackHeartbeat(context.Background())
+		if err != nil {
+			fmt.Println("Error calling TrackHeartbeat:", err)
+			continue // Retry sending heartbeat on the next tick
+		}
 
-	// Receive and process responses from the stream
-	for {
+		// Send the request
+		err = stream.Send(&pb.HeartbeatRequest{NodeId: "1000"})
+		if err != nil {
+			fmt.Println("Error sending HeartbeatRequest:", err)
+			continue // Retry sending heartbeat on the next tick
+		}
+
+		// Receive and process responses from the stream
 		resp, err := stream.Recv()
 		if err != nil {
 			fmt.Println("Error receiving HeartbeatResponse:", err)
-			return
+			continue // Retry sending heartbeat on the next tick
 		}
 		fmt.Println("Received HeartbeatResponse:", resp)
 	}
