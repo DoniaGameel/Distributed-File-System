@@ -19,6 +19,11 @@ func main() {
 	defer conn.Close()
 	c := pb.NewServicesClient(conn)
 
+	// Read input from user
+	fmt.Print("Enter Node ID: ")
+	var text string
+	fmt.Scanln(&text)
+
 	// Start a ticker that triggers sending heartbeat every 1 second
 	ticker := time.NewTicker(1 * time.Second)
 	defer ticker.Stop()
@@ -32,7 +37,7 @@ func main() {
 		}
 
 		// Send the request
-		err = stream.Send(&pb.HeartbeatRequest{NodeId: "1000"})
+		err = stream.Send(&pb.HeartbeatRequest{NodeId: text})
 		if err != nil {
 			fmt.Println("Error sending HeartbeatRequest:", err)
 			continue // Retry sending heartbeat on the next tick

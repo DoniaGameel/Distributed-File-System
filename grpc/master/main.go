@@ -1,32 +1,33 @@
 package main
 
 import (
-	"context"
 	"fmt"
 	"io"
 	"net"
-	"strings"
+	"sync"
+	"time"
 
 	pb "wireless_lab_1/grpc/services" // Import the generated package
 
 	"google.golang.org/grpc"
 )
 
+type nodeStatus struct {
+	id       string
+	alive    bool
+	lastSeen time.Time
+}
+
 type masterServer struct {
+	nodes map[string]*nodeStatus
+	mutex sync.Mutex
 	pb.UnimplementedServicesServer
 }
 
-func (s *masterServer) Hello(ctx context.Context, req *pb.TextRequest) (*pb.TextResponse, error) {
-	text := req.GetText()
-	capitalizedText := strings.ToUpper(text)
-	return &pb.TextResponse{CapitalizedText: capitalizedText}, nil
+// mustEmbedUnimplementedServicesServer implements services.ServicesServer.
+func (s *masterServer) mustEmbedUnimplementedServicesServer() {
+	panic("unimplemented")
 }
-
-/*func (s *masterServer) TrackHeartbeat(ctx context.Context, req *pb.HeartbeatRequest) (*pb.HeartbeatResponse, error) {
-	text := req.GetNodeId()
-	fmt.Println("Node ID:", text)
-	return &pb.HeartbeatResponse{}, nil
-}*/
 
 func (s *masterServer) TrackHeartbeat(stream pb.Services_TrackHeartbeatServer) error {
 	for {
@@ -37,13 +38,42 @@ func (s *masterServer) TrackHeartbeat(stream pb.Services_TrackHeartbeatServer) e
 		if err != nil {
 			return err
 		}
-		text := req.GetNodeId()
-		fmt.Println("Node ID:", text)
+		nodeId := req.GetNodeId()
+
+		s.mutex.Lock()
+		node, ok := s.nodes[nodeId]
+		if !ok {
+			node = &nodeStatus{
+				id:       nodeId,
+				alive:    true,
+				lastSeen: time.Now(),
+			}
+			s.nodes[nodeId] = node
+		}
+		node.lastSeen = time.Now()
+		node.alive = true
+		s.mutex.Unlock()
 
 		// Send a HeartbeatResponse back to the Data Keeper node
-        if err := stream.Send(&pb.HeartbeatResponse{}); err != nil {
-            return err
-        }
+		if err := stream.Send(&pb.HeartbeatResponse{}); err != nil {
+			return err
+		}
+	}
+}
+
+func (s *masterServer) monitorLiveness() {
+	ticker := time.NewTicker(1 * time.Second)
+	defer ticker.Stop()
+
+	for range ticker.C {
+		s.mutex.Lock()
+		for nodeId, node := range s.nodes {
+			if time.Since(node.lastSeen) > 1*time.Second {
+				node.alive = false
+				fmt.Printf("Node with ID %s interrupted and marked down as non-responsive\n", nodeId)
+			}
+		}
+		s.mutex.Unlock()
 	}
 }
 
@@ -54,8 +84,14 @@ func main() {
 		return
 	}
 	s := grpc.NewServer()
-	pb.RegisterServicesServer(s, &masterServer{})
+	masterServer := &masterServer{
+		nodes: make(map[string]*nodeStatus),
+	}
+	pb.RegisterServicesServer(s, masterServer)
 	fmt.Println("Server started. Listening on port 8080...")
+
+	go masterServer.monitorLiveness()
+
 	if err := s.Serve(lis); err != nil {
 		fmt.Println("failed to serve:", err)
 	}
