@@ -14,6 +14,12 @@ type dataNodeServer struct {
 	pb.UnimplementedServicesServer
 }
 
+func (s *dataNodeServer) clientToDataKeeperUpload(_ context.Context, req *pb.ClientToDataKeeperUploadRequest) (*pb.ClientToDataKeeperUploadResponse, error) {
+	fileName := req.GetFileName()
+	fmt.Println("Received file:", fileName)
+	return &pb.ClientToDataKeeperUploadResponse{}, nil
+}
+
 func main() {
 	// establish the node as a client
 	conn, err := grpc.Dial("localhost:8080", grpc.WithInsecure())

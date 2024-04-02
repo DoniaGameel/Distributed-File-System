@@ -24,7 +24,7 @@ message clientToMasterUploadRequest{
 
 message clientToMasterUploadResponse{
     string ip_address = 1;
-    int32 port = 2;
+    string port = 2;
 }
 
 message clientToDataKeeperUploadRequest{
