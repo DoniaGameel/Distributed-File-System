@@ -3,14 +3,19 @@ package main
 import (
 	"context"
 	"fmt"
+	"net"
 	"time"
 
 	pb "wireless_lab_1/grpc/services" // Import the generated package
 
 	"google.golang.org/grpc"
 )
+type dataNodeServer struct {
+	pb.UnimplementedServicesServer
+}
 
 func main() {
+	// establish the node as a client
 	conn, err := grpc.Dial("localhost:8080", grpc.WithInsecure())
 	if err != nil {
 		fmt.Println("did not connect:", err)
@@ -19,6 +24,20 @@ func main() {
 	defer conn.Close()
 	c := pb.NewServicesClient(conn)
 
+	// establish the node as a server
+	go func() {
+        lis, err := net.Listen("tcp", ":8081")
+        if err != nil {
+            fmt.Println("failed to listen:", err)
+            return
+        }
+        s := grpc.NewServer()
+        pb.RegisterServicesServer(s, &dataNodeServer{})
+        fmt.Println("Server started. Listening on port 8081...")
+        if err := s.Serve(lis); err != nil {
+            fmt.Println("failed to serve:", err)
+        }
+    }()
 	// Read input from user
 	fmt.Print("Enter Node ID: ")
 	var text string
