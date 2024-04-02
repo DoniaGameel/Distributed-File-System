@@ -27,10 +27,19 @@ message clientToMasterUploadResponse{
     int32 port = 2;
 }
 
+message clientToDataKeeperUploadRequest{
+    string fileName = 1;
+}
+
+message clientToDataKeeperUploadResponse{
+    
+}
+
 service Services {
     rpc TrackHeartbeat (stream HeartbeatRequest) returns (stream HeartbeatResponse) {}
     rpc Hello(TextRequest) returns (TextResponse);
     rpc clientToMasterUpload(clientToMasterUploadRequest) returns (clientToMasterUploadResponse);
+    rpc clientToDataKeeperUpload(clientToDataKeeperUploadRequest) returns (clientToDataKeeperUploadResponse);
 }
 
 

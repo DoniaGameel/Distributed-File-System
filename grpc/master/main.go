@@ -80,7 +80,7 @@ func (s *masterServer) monitorLiveness() {
 // handle client upload request
 func (s *masterServer) ClientToMasterUpload(ctx context.Context, req *pb.ClientToMasterUploadRequest) (*pb.ClientToMasterUploadResponse, error) {
 	fmt.Println("Received client request")
-	return &pb.ClientToMasterUploadResponse{IpAddress: "ip", Port: 1222}, nil
+	return &pb.ClientToMasterUploadResponse{IpAddress: "ip", Port: 8081}, nil
 }
 
 func main() {

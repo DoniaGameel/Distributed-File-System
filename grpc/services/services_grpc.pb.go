@@ -19,9 +19,10 @@ import (
 const _ = grpc.SupportPackageIsVersion7
 
 const (
-	Services_TrackHeartbeat_FullMethodName       = "/services.Services/TrackHeartbeat"
-	Services_Hello_FullMethodName                = "/services.Services/Hello"
-	Services_ClientToMasterUpload_FullMethodName = "/services.Services/clientToMasterUpload"
+	Services_TrackHeartbeat_FullMethodName           = "/services.Services/TrackHeartbeat"
+	Services_Hello_FullMethodName                    = "/services.Services/Hello"
+	Services_ClientToMasterUpload_FullMethodName     = "/services.Services/clientToMasterUpload"
+	Services_ClientToDataKeeperUpload_FullMethodName = "/services.Services/clientToDataKeeperUpload"
 )
 
 // ServicesClient is the client API for Services service.
@@ -31,6 +32,7 @@ type ServicesClient interface {
 	TrackHeartbeat(ctx context.Context, opts ...grpc.CallOption) (Services_TrackHeartbeatClient, error)
 	Hello(ctx context.Context, in *TextRequest, opts ...grpc.CallOption) (*TextResponse, error)
 	ClientToMasterUpload(ctx context.Context, in *ClientToMasterUploadRequest, opts ...grpc.CallOption) (*ClientToMasterUploadResponse, error)
+	ClientToDataKeeperUpload(ctx context.Context, in *ClientToDataKeeperUploadRequest, opts ...grpc.CallOption) (*ClientToDataKeeperUploadResponse, error)
 }
 
 type servicesClient struct {
@@ -90,6 +92,15 @@ func (c *servicesClient) ClientToMasterUpload(ctx context.Context, in *ClientToM
 	return out, nil
 }
 
+func (c *servicesClient) ClientToDataKeeperUpload(ctx context.Context, in *ClientToDataKeeperUploadRequest, opts ...grpc.CallOption) (*ClientToDataKeeperUploadResponse, error) {
+	out := new(ClientToDataKeeperUploadResponse)
+	err := c.cc.Invoke(ctx, Services_ClientToDataKeeperUpload_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // ServicesServer is the server API for Services service.
 // All implementations must embed UnimplementedServicesServer
 // for forward compatibility
@@ -97,6 +108,7 @@ type ServicesServer interface {
 	TrackHeartbeat(Services_TrackHeartbeatServer) error
 	Hello(context.Context, *TextRequest) (*TextResponse, error)
 	ClientToMasterUpload(context.Context, *ClientToMasterUploadRequest) (*ClientToMasterUploadResponse, error)
+	ClientToDataKeeperUpload(context.Context, *ClientToDataKeeperUploadRequest) (*ClientToDataKeeperUploadResponse, error)
 	mustEmbedUnimplementedServicesServer()
 }
 
@@ -112,6 +124,9 @@ func (UnimplementedServicesServer) Hello(context.Context, *TextRequest) (*TextRe
 }
 func (UnimplementedServicesServer) ClientToMasterUpload(context.Context, *ClientToMasterUploadRequest) (*ClientToMasterUploadResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ClientToMasterUpload not implemented")
+}
+func (UnimplementedServicesServer) ClientToDataKeeperUpload(context.Context, *ClientToDataKeeperUploadRequest) (*ClientToDataKeeperUploadResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ClientToDataKeeperUpload not implemented")
 }
 func (UnimplementedServicesServer) mustEmbedUnimplementedServicesServer() {}
 
@@ -188,6 +203,24 @@ func _Services_ClientToMasterUpload_Handler(srv interface{}, ctx context.Context
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Services_ClientToDataKeeperUpload_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ClientToDataKeeperUploadRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ServicesServer).ClientToDataKeeperUpload(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Services_ClientToDataKeeperUpload_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ServicesServer).ClientToDataKeeperUpload(ctx, req.(*ClientToDataKeeperUploadRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Services_ServiceDesc is the grpc.ServiceDesc for Services service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -202,6 +235,10 @@ var Services_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "clientToMasterUpload",
 			Handler:    _Services_ClientToMasterUpload_Handler,
+		},
+		{
+			MethodName: "clientToDataKeeperUpload",
+			Handler:    _Services_ClientToDataKeeperUpload_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{
