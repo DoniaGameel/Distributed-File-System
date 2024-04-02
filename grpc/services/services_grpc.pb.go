@@ -19,8 +19,9 @@ import (
 const _ = grpc.SupportPackageIsVersion7
 
 const (
-	Services_TrackHeartbeat_FullMethodName = "/services.Services/TrackHeartbeat"
-	Services_Hello_FullMethodName          = "/services.Services/Hello"
+	Services_TrackHeartbeat_FullMethodName       = "/services.Services/TrackHeartbeat"
+	Services_Hello_FullMethodName                = "/services.Services/Hello"
+	Services_ClientToMasterUpload_FullMethodName = "/services.Services/clientToMasterUpload"
 )
 
 // ServicesClient is the client API for Services service.
@@ -29,6 +30,7 @@ const (
 type ServicesClient interface {
 	TrackHeartbeat(ctx context.Context, opts ...grpc.CallOption) (Services_TrackHeartbeatClient, error)
 	Hello(ctx context.Context, in *TextRequest, opts ...grpc.CallOption) (*TextResponse, error)
+	ClientToMasterUpload(ctx context.Context, in *ClientToMasterUploadRequest, opts ...grpc.CallOption) (*ClientToMasterUploadResponse, error)
 }
 
 type servicesClient struct {
@@ -79,12 +81,22 @@ func (c *servicesClient) Hello(ctx context.Context, in *TextRequest, opts ...grp
 	return out, nil
 }
 
+func (c *servicesClient) ClientToMasterUpload(ctx context.Context, in *ClientToMasterUploadRequest, opts ...grpc.CallOption) (*ClientToMasterUploadResponse, error) {
+	out := new(ClientToMasterUploadResponse)
+	err := c.cc.Invoke(ctx, Services_ClientToMasterUpload_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // ServicesServer is the server API for Services service.
 // All implementations must embed UnimplementedServicesServer
 // for forward compatibility
 type ServicesServer interface {
 	TrackHeartbeat(Services_TrackHeartbeatServer) error
 	Hello(context.Context, *TextRequest) (*TextResponse, error)
+	ClientToMasterUpload(context.Context, *ClientToMasterUploadRequest) (*ClientToMasterUploadResponse, error)
 	mustEmbedUnimplementedServicesServer()
 }
 
@@ -97,6 +109,9 @@ func (UnimplementedServicesServer) TrackHeartbeat(Services_TrackHeartbeatServer)
 }
 func (UnimplementedServicesServer) Hello(context.Context, *TextRequest) (*TextResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Hello not implemented")
+}
+func (UnimplementedServicesServer) ClientToMasterUpload(context.Context, *ClientToMasterUploadRequest) (*ClientToMasterUploadResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ClientToMasterUpload not implemented")
 }
 func (UnimplementedServicesServer) mustEmbedUnimplementedServicesServer() {}
 
@@ -155,6 +170,24 @@ func _Services_Hello_Handler(srv interface{}, ctx context.Context, dec func(inte
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Services_ClientToMasterUpload_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ClientToMasterUploadRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ServicesServer).ClientToMasterUpload(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Services_ClientToMasterUpload_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ServicesServer).ClientToMasterUpload(ctx, req.(*ClientToMasterUploadRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Services_ServiceDesc is the grpc.ServiceDesc for Services service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -165,6 +198,10 @@ var Services_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "Hello",
 			Handler:    _Services_Hello_Handler,
+		},
+		{
+			MethodName: "clientToMasterUpload",
+			Handler:    _Services_ClientToMasterUpload_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{

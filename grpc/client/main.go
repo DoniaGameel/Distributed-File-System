@@ -4,32 +4,29 @@ import (
 	"context"
 	"fmt"
 
-	pb "wireless_lab_1/grpc/capitalize" // Import the generated package
+	pb "wireless_lab_1/grpc/services" // Import the generated package
 
 	"google.golang.org/grpc"
 )
 
 func main() {
+	// Dial the master server at localhost:8080
 	conn, err := grpc.Dial("localhost:8080", grpc.WithInsecure())
 	if err != nil {
 		fmt.Println("did not connect:", err)
 		return
 	}
 	defer conn.Close()
-	c := pb.NewTextServiceClient(conn)
 
-	// Read input from user
-	fmt.Print("Enter text to capitalize: ")
-	var text string
-	fmt.Scanln(&text)
+	// Create a client instance
+	c := pb.NewServicesClient(conn)
 
 	// Call the RPC method
-	resp, err := c.Capitalize(context.Background(), &pb.TextRequest{Text: text})
+	resp, err := c.ClientToMasterUpload(context.Background(), &pb.ClientToMasterUploadRequest{})
 	if err != nil {
 		fmt.Println("Error calling Capitalize:", err)
 		return
 	}
-
-	// Print the result
-	fmt.Println("Capitalized text:", resp.GetCapitalizedText())
+	fmt.Println("Received Upload Response:", resp)
+	
 }

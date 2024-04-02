@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"net"
@@ -75,6 +76,11 @@ func (s *masterServer) monitorLiveness() {
 		}
 		s.mutex.Unlock()
 	}
+}
+// handle client upload request
+func (s *masterServer) ClientToMasterUpload(ctx context.Context, req *pb.ClientToMasterUploadRequest) (*pb.ClientToMasterUploadResponse, error) {
+	fmt.Println("Received client request")
+	return &pb.ClientToMasterUploadResponse{IpAddress: "ip", Port: 1222}, nil
 }
 
 func main() {

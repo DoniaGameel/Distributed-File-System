@@ -19,9 +19,18 @@ message HeartbeatRequest{
 message HeartbeatResponse {
 }
 
+message clientToMasterUploadRequest{
+}
+
+message clientToMasterUploadResponse{
+    string ip_address = 1;
+    int32 port = 2;
+}
+
 service Services {
     rpc TrackHeartbeat (stream HeartbeatRequest) returns (stream HeartbeatResponse) {}
     rpc Hello(TextRequest) returns (TextResponse);
+    rpc clientToMasterUpload(clientToMasterUploadRequest) returns (clientToMasterUploadResponse);
 }
 
 
