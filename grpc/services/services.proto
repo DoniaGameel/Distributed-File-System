@@ -29,9 +29,11 @@ message clientToMasterUploadResponse{
 
 message clientToDataKeeperUploadRequest{
     string fileName = 1;
+    bytes file_content = 2;
 }
 
 message clientToDataKeeperUploadResponse{
+    bool success = 1;
     
 }
 

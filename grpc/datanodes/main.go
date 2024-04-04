@@ -3,7 +3,10 @@ package main
 import (
 	"context"
 	"fmt"
+	"io/ioutil"
 	"net"
+	"os"
+	"path/filepath"
 	"time"
 
 	pb "wireless_lab_1/grpc/services" // Import the generated package
@@ -16,7 +19,39 @@ type dataNodeServer struct {
 
 func (s *dataNodeServer) ClientToDataKeeperUpload(_ context.Context, req *pb.ClientToDataKeeperUploadRequest) (*pb.ClientToDataKeeperUploadResponse, error) {
 	fileName := req.GetFileName()
-	fmt.Println("Received file:", fileName)
+
+    // Get the current working directory of the project
+    cwd, err := os.Getwd()
+    if err != nil {
+        // Handle error
+        return &pb.ClientToDataKeeperUploadResponse{Success: false}, err
+    }
+
+    // Specify the relative directory path (change this as needed)
+    relativeDir := "copied"
+    
+    // Join the current working directory with the relative directory path
+    directory := filepath.Join(cwd, relativeDir)
+
+    // Create the directory if it doesn't exist
+    if _, err := os.Stat(directory); os.IsNotExist(err) {
+        if err := os.MkdirAll(directory, 0755); err != nil {
+            // Handle error
+            return &pb.ClientToDataKeeperUploadResponse{Success: false}, err
+        }
+    }
+
+    // Join the directory with the file name to get the full file path
+    filePath := filepath.Join(directory, fileName)
+    
+    // Write the file content to the specified file path
+    err = ioutil.WriteFile(filePath, req.GetFileContent(), 0644)
+    if err != nil {
+        // Handle error
+        fmt.Println("Error receiving the file:", fileName)
+        return &pb.ClientToDataKeeperUploadResponse{Success: false}, err
+    }
+    fmt.Println("Received file:", fileName)
 	masterConn, err := grpc.Dial("localhost:8080", grpc.WithInsecure())
     if err != nil {
         fmt.Println("Failed to connect to master:", err)
@@ -42,7 +77,7 @@ func (s *dataNodeServer) ClientToDataKeeperUpload(_ context.Context, req *pb.Cli
         fmt.Println("Successfully notified master about received file")
     }
 
-    return &pb.ClientToDataKeeperUploadResponse{}, nil
+    return &pb.ClientToDataKeeperUploadResponse{Success: true}, nil
 }
 
 var nodeId string

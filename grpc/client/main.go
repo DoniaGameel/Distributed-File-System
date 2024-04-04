@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"os"
 	"sync"
 
 	pb "wireless_lab_1/grpc/services" // Import the generated package
@@ -21,6 +22,20 @@ func (l *clientListener) MasterToClientSuccessNotify(ctx context.Context, req *p
 }
 
 func main() {
+	var file_name string
+	// Read file name from the user
+	fmt.Print("Enter File Name with extension: ")
+	fmt.Scanln(&file_name)
+
+	// get the file content
+	// Read file content
+	fileContent, err := os.ReadFile(file_name)
+	if err != nil {
+		// Handle error
+		fmt.Println("Error reading the file", err)
+		return
+	}
+	fmt.Printf("Read file content (first 100 bytes): %x\n", fileContent[:100]) // Print first 100 bytes (hexadecimal)
     // Dial the master server at localhost:8080
     conn, err := grpc.Dial("localhost:8080", grpc.WithInsecure())
     if err != nil {
@@ -72,7 +87,10 @@ func main() {
     client_2 := pb.NewServicesClient(conn_data)
 
     // Call the RPC method
-    resp_data, err := client_2.ClientToDataKeeperUpload(context.Background(), &pb.ClientToDataKeeperUploadRequest{FileName: "file"})
+    resp_data, err := client_2.ClientToDataKeeperUpload(context.Background(), &pb.ClientToDataKeeperUploadRequest{
+		FileName: file_name,
+		FileContent: fileContent,
+	})
     if err != nil {
         fmt.Println("Error calling Upload to data node: ", err)
         return
