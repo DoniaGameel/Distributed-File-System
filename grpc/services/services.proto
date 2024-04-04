@@ -35,11 +35,32 @@ message clientToDataKeeperUploadResponse{
     
 }
 
+message DataNodeNotificationRequest {
+    string fileName = 1;
+    string node_id = 2;
+}
+
+message DataNodeNotificationResponse {
+    
+}
+
+message MasterToClientSuccessNotifyRequest{
+
+}
+
+message MasterToClientSuccessNotifyResponse{
+    
+}
+
 service Services {
     rpc TrackHeartbeat (stream HeartbeatRequest) returns (stream HeartbeatResponse) {}
     rpc Hello(TextRequest) returns (TextResponse);
     rpc clientToMasterUpload(clientToMasterUploadRequest) returns (clientToMasterUploadResponse);
     rpc clientToDataKeeperUpload(clientToDataKeeperUploadRequest) returns (clientToDataKeeperUploadResponse);
+    rpc dataNodeNotifyMaster(DataNodeNotificationRequest) returns (DataNodeNotificationResponse);
+    rpc MasterToClientSuccessNotify(MasterToClientSuccessNotifyRequest) returns (MasterToClientSuccessNotifyResponse);
 }
+
+
 
 

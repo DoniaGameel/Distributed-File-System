@@ -14,11 +14,38 @@ type dataNodeServer struct {
 	pb.UnimplementedServicesServer
 }
 
-func (s *dataNodeServer) clientToDataKeeperUpload(_ context.Context, req *pb.ClientToDataKeeperUploadRequest) (*pb.ClientToDataKeeperUploadResponse, error) {
+func (s *dataNodeServer) ClientToDataKeeperUpload(_ context.Context, req *pb.ClientToDataKeeperUploadRequest) (*pb.ClientToDataKeeperUploadResponse, error) {
 	fileName := req.GetFileName()
 	fmt.Println("Received file:", fileName)
-	return &pb.ClientToDataKeeperUploadResponse{}, nil
+	masterConn, err := grpc.Dial("localhost:8080", grpc.WithInsecure())
+    if err != nil {
+        fmt.Println("Failed to connect to master:", err)
+        // Handle connection error (e.g., retry or log)
+        return nil, err
+    }
+    defer masterConn.Close() // Ensure master connection is closed
+
+    masterClient := pb.NewServicesClient(masterConn)
+
+    // Prepare notification message
+    notification := &pb.DataNodeNotificationRequest{
+        FileName: fileName,
+		NodeId: nodeId,
+    }
+
+    // Send notification to the master
+    _, err = masterClient.DataNodeNotifyMaster(context.Background(), notification)
+    if err != nil {
+        fmt.Println("Error sending notification to master:", err)
+        // Handle notification error (e.g., retry or log)
+    } else {
+        fmt.Println("Successfully notified master about received file")
+    }
+
+    return &pb.ClientToDataKeeperUploadResponse{}, nil
 }
+
+var nodeId string
 
 func main() {
 	// establish the node as a client
@@ -46,8 +73,7 @@ func main() {
     }()
 	// Read input from user
 	fmt.Print("Enter Node ID: ")
-	var text string
-	fmt.Scanln(&text)
+	fmt.Scanln(&nodeId)
 
 	// Start a ticker that triggers sending heartbeat every 1 second
 	ticker := time.NewTicker(1 * time.Second)
@@ -62,7 +88,7 @@ func main() {
 		}
 
 		// Send the request
-		err = stream.Send(&pb.HeartbeatRequest{NodeId: text})
+		err = stream.Send(&pb.HeartbeatRequest{NodeId: nodeId})
 		if err != nil {
 			fmt.Println("Error sending HeartbeatRequest:", err)
 			continue // Retry sending heartbeat on the next tick

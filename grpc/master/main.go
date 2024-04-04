@@ -17,6 +17,8 @@ type nodeStatus struct {
 	id       string
 	alive    bool
 	lastSeen time.Time
+	filenames []string
+	mutex     sync.Mutex
 }
 
 type masterServer struct {
@@ -48,6 +50,7 @@ func (s *masterServer) TrackHeartbeat(stream pb.Services_TrackHeartbeatServer) e
 				id:       nodeId,
 				alive:    true,
 				lastSeen: time.Now(),
+				filenames: []string{},
 			}
 			s.nodes[nodeId] = node
 		}
@@ -81,6 +84,26 @@ func (s *masterServer) monitorLiveness() {
 func (s *masterServer) ClientToMasterUpload(ctx context.Context, req *pb.ClientToMasterUploadRequest) (*pb.ClientToMasterUploadResponse, error) {
 	fmt.Println("Received client request")
 	return &pb.ClientToMasterUploadResponse{IpAddress: "ip", Port: "8081"}, nil
+}
+// handle datanode notification of receiving the file
+func (s *masterServer) DataNodeNotifyMaster(ctx context.Context, req *pb.DataNodeNotificationRequest) (*pb.DataNodeNotificationResponse, error) {
+	fileName := req.GetFileName()
+	nodeId := req.GetNodeId()
+	fmt.Println("")
+	node, ok := s.nodes[nodeId]
+    if !ok {
+        fmt.Printf("Node with ID %s not found\n", nodeId)
+        return nil, fmt.Errorf("node with ID %s not found", nodeId)
+    }
+
+    // Acquire the node's mutex for thread safety
+    node.mutex.Lock()
+    defer node.mutex.Unlock()
+
+    node.filenames = append(node.filenames, fileName)
+    fmt.Printf("Data node %s notified the master about receiving file: %s\n", nodeId, fileName)
+
+    return &pb.DataNodeNotificationResponse{}, nil
 }
 
 func main() {
