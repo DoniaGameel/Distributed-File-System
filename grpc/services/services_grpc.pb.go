@@ -19,11 +19,12 @@ import (
 const _ = grpc.SupportPackageIsVersion7
 
 const (
-	Services_TrackHeartbeat_FullMethodName           = "/services.Services/TrackHeartbeat"
-	Services_Hello_FullMethodName                    = "/services.Services/Hello"
-	Services_ClientToMasterUpload_FullMethodName     = "/services.Services/clientToMasterUpload"
-	Services_ClientToDataKeeperUpload_FullMethodName = "/services.Services/clientToDataKeeperUpload"
-	Services_DataNodeNotifyMaster_FullMethodName     = "/services.Services/dataNodeNotifyMaster"
+	Services_TrackHeartbeat_FullMethodName              = "/services.Services/TrackHeartbeat"
+	Services_Hello_FullMethodName                       = "/services.Services/Hello"
+	Services_ClientToMasterUpload_FullMethodName        = "/services.Services/clientToMasterUpload"
+	Services_ClientToDataKeeperUpload_FullMethodName    = "/services.Services/clientToDataKeeperUpload"
+	Services_DataNodeNotifyMaster_FullMethodName        = "/services.Services/dataNodeNotifyMaster"
+	Services_MasterToClientSuccessNotify_FullMethodName = "/services.Services/MasterToClientSuccessNotify"
 )
 
 // ServicesClient is the client API for Services service.
@@ -35,6 +36,7 @@ type ServicesClient interface {
 	ClientToMasterUpload(ctx context.Context, in *ClientToMasterUploadRequest, opts ...grpc.CallOption) (*ClientToMasterUploadResponse, error)
 	ClientToDataKeeperUpload(ctx context.Context, in *ClientToDataKeeperUploadRequest, opts ...grpc.CallOption) (*ClientToDataKeeperUploadResponse, error)
 	DataNodeNotifyMaster(ctx context.Context, in *DataNodeNotificationRequest, opts ...grpc.CallOption) (*DataNodeNotificationResponse, error)
+	MasterToClientSuccessNotify(ctx context.Context, in *MasterToClientSuccessNotifyRequest, opts ...grpc.CallOption) (*MasterToClientSuccessNotifyResponse, error)
 }
 
 type servicesClient struct {
@@ -112,6 +114,15 @@ func (c *servicesClient) DataNodeNotifyMaster(ctx context.Context, in *DataNodeN
 	return out, nil
 }
 
+func (c *servicesClient) MasterToClientSuccessNotify(ctx context.Context, in *MasterToClientSuccessNotifyRequest, opts ...grpc.CallOption) (*MasterToClientSuccessNotifyResponse, error) {
+	out := new(MasterToClientSuccessNotifyResponse)
+	err := c.cc.Invoke(ctx, Services_MasterToClientSuccessNotify_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // ServicesServer is the server API for Services service.
 // All implementations must embed UnimplementedServicesServer
 // for forward compatibility
@@ -121,6 +132,7 @@ type ServicesServer interface {
 	ClientToMasterUpload(context.Context, *ClientToMasterUploadRequest) (*ClientToMasterUploadResponse, error)
 	ClientToDataKeeperUpload(context.Context, *ClientToDataKeeperUploadRequest) (*ClientToDataKeeperUploadResponse, error)
 	DataNodeNotifyMaster(context.Context, *DataNodeNotificationRequest) (*DataNodeNotificationResponse, error)
+	MasterToClientSuccessNotify(context.Context, *MasterToClientSuccessNotifyRequest) (*MasterToClientSuccessNotifyResponse, error)
 	mustEmbedUnimplementedServicesServer()
 }
 
@@ -142,6 +154,9 @@ func (UnimplementedServicesServer) ClientToDataKeeperUpload(context.Context, *Cl
 }
 func (UnimplementedServicesServer) DataNodeNotifyMaster(context.Context, *DataNodeNotificationRequest) (*DataNodeNotificationResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method DataNodeNotifyMaster not implemented")
+}
+func (UnimplementedServicesServer) MasterToClientSuccessNotify(context.Context, *MasterToClientSuccessNotifyRequest) (*MasterToClientSuccessNotifyResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method MasterToClientSuccessNotify not implemented")
 }
 func (UnimplementedServicesServer) mustEmbedUnimplementedServicesServer() {}
 
@@ -254,6 +269,24 @@ func _Services_DataNodeNotifyMaster_Handler(srv interface{}, ctx context.Context
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Services_MasterToClientSuccessNotify_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(MasterToClientSuccessNotifyRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ServicesServer).MasterToClientSuccessNotify(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Services_MasterToClientSuccessNotify_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ServicesServer).MasterToClientSuccessNotify(ctx, req.(*MasterToClientSuccessNotifyRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Services_ServiceDesc is the grpc.ServiceDesc for Services service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -276,6 +309,10 @@ var Services_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "dataNodeNotifyMaster",
 			Handler:    _Services_DataNodeNotifyMaster_Handler,
+		},
+		{
+			MethodName: "MasterToClientSuccessNotify",
+			Handler:    _Services_MasterToClientSuccessNotify_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{

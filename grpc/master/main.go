@@ -103,6 +103,28 @@ func (s *masterServer) DataNodeNotifyMaster(ctx context.Context, req *pb.DataNod
     node.filenames = append(node.filenames, fileName)
     fmt.Printf("Data node %s notified the master about receiving file: %s\n", nodeId, fileName)
 
+	clientConn, err := grpc.Dial("localhost:50001", grpc.WithInsecure())
+    if err != nil {
+        fmt.Println("Failed to connect to client:", err)
+        // Handle connection error (e.g., retry or log)
+        return nil, err
+    }
+    defer clientConn.Close() // Ensure master connection is closed
+
+    masterClient := pb.NewServicesClient(clientConn)
+
+    // Prepare notification message
+    notification := &pb.MasterToClientSuccessNotifyRequest{}
+
+    // Send notification to the master
+    _, err = masterClient.MasterToClientSuccessNotify(context.Background(), notification)
+    if err != nil {
+        fmt.Println("Error sending notification to the client:", err)
+        // Handle notification error (e.g., retry or log)
+    } else {
+        fmt.Println("Successfully notified client about success")
+    }
+
     return &pb.DataNodeNotificationResponse{}, nil
 }
 
