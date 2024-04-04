@@ -28,7 +28,7 @@ func (s *dataNodeServer) ClientToDataKeeperUpload(_ context.Context, req *pb.Cli
     }
 
     // Specify the relative directory path (change this as needed)
-    relativeDir := "copied"
+    relativeDir := "copied_" + nodeId
     
     // Join the current working directory with the relative directory path
     directory := filepath.Join(cwd, relativeDir)
