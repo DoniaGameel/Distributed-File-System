@@ -72,7 +72,7 @@ func (s *masterServer) monitorLiveness() {
 	for range ticker.C {
 		s.mutex.Lock()
 		for nodeId, node := range s.nodes {
-			if time.Since(node.lastSeen) > 1*time.Second {
+			if time.Since(node.lastSeen) > 10*time.Second {
 				node.alive = false
 				fmt.Printf("Node with ID %s interrupted and marked down as non-responsive\n", nodeId)
 			}
