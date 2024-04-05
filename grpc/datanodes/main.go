@@ -83,8 +83,76 @@ func (s *dataNodeServer) ClientToDataKeeperUpload(_ context.Context, req *pb.Cli
 
 // handle replica request
 func (s *dataNodeServer) MasterToDataKeeperReplica(ctx context.Context, req *pb.MasterToDataKeeperReplicaRequest) (*pb.MasterToDataKeeperReplicaResponse, error) {
-	fmt.Println("Received replica request .. node_id: ", req.IpAddress, " file_name: ", req.FileName, " port: ", req.Port)
-	return &pb.MasterToDataKeeperReplicaResponse{}, nil
+	fmt.Println("Received replica request .. IpAddress: ", req.IpAddress, " file_name: ", req.FileName, " port: ", req.Port)
+	
+    node_port := req.IpAddress + req.Port
+    replicaConn, err := grpc.Dial(node_port, grpc.WithInsecure())
+    if err != nil {
+        fmt.Println("Failed to connect to node:", err)
+        // Handle connection error (e.g., retry or log)
+        return nil, err
+    }
+    defer replicaConn.Close()
+
+    replicaClient := pb.NewServicesClient(replicaConn)
+
+    // Prepare notification message
+    request := &pb.NodeToNodeReplicaRequest{
+        FileName: req.FileName,
+    }
+
+    // Send notification to the master
+    resp, err := replicaClient.NodeToNodeReplica(context.Background(), request)
+    if err != nil {
+        fmt.Println("Error sending replica request:", err)
+        // Handle notification error (e.g., retry or log)
+    } else {
+        fmt.Println("Successfully sent replica request")
+    }
+    fmt.Println("Response status: ", resp.Success)
+
+    // Get the current working directory of the project
+    cwd, err := os.Getwd()
+    if err != nil {
+        // Handle error
+        return &pb.MasterToDataKeeperReplicaResponse{}, nil
+    }
+
+    // Specify the relative directory path (change this as needed)
+    relativeDir := "copied_" + nodeId
+    
+    // Join the current working directory with the relative directory path
+    directory := filepath.Join(cwd, relativeDir)
+
+    // Create the directory if it doesn't exist
+    if _, err := os.Stat(directory); os.IsNotExist(err) {
+        if err := os.MkdirAll(directory, 0755); err != nil {
+            // Handle error
+            return &pb.MasterToDataKeeperReplicaResponse{}, nil
+        }
+    }
+
+    // Join the directory with the file name to get the full file path
+    filePath := filepath.Join(directory, req.FileName)
+    err = ioutil.WriteFile(filePath,resp.GetFileContent(), 0644)
+    if err != nil {
+        // Handle error
+        fmt.Println("Error saving the file")
+    }
+    return &pb.MasterToDataKeeperReplicaResponse{}, nil
+}
+
+// handle replication request
+func (s *dataNodeServer) NodeToNodeReplica(ctx context.Context, req *pb.NodeToNodeReplicaRequest) (*pb.NodeToNodeReplicaResponse, error) {
+	fmt.Println("Received replica request")
+    file_name := req.GetFileName()
+    file_content, err := os.ReadFile(file_name)
+    if err != nil {
+        // Handle error
+        fmt.Println("Error reading the file", err)
+        return &pb.NodeToNodeReplicaResponse{Success: false}, nil
+    }
+	return &pb.NodeToNodeReplicaResponse{FileContent: file_content, Success: true}, nil
 }
 
 var nodeId string

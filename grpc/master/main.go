@@ -156,14 +156,14 @@ func (s *masterServer) DataNodeNotifyMaster(ctx context.Context, req *pb.DataNod
 		replicaClient := pb.NewServicesClient(replicaConn)
 
 		// Prepare notification message
-		notification := &pb.MasterToDataKeeperReplicaRequest{
+		request := &pb.MasterToDataKeeperReplicaRequest{
 			FileName: fileName,
-			IpAddress: nodeId,
+			IpAddress: "localhost",
 			Port: port,
 		}
 
 		// Send notification to the master
-		_, err = replicaClient.MasterToDataKeeperReplica(context.Background(), notification)
+		_, err = replicaClient.MasterToDataKeeperReplica(context.Background(), request)
 		if err != nil {
 			fmt.Println("Error sending replica request:", err)
 			// Handle notification error (e.g., retry or log)

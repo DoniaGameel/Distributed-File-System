@@ -26,6 +26,7 @@ const (
 	Services_MasterToClientSuccessNotify_FullMethodName = "/services.Services/MasterToClientSuccessNotify"
 	Services_DownloadFile_FullMethodName                = "/services.Services/DownloadFile"
 	Services_MasterToDataKeeperReplica_FullMethodName   = "/services.Services/MasterToDataKeeperReplica"
+	Services_NodeToNodeReplica_FullMethodName           = "/services.Services/NodeToNodeReplica"
 )
 
 // ServicesClient is the client API for Services service.
@@ -39,6 +40,7 @@ type ServicesClient interface {
 	MasterToClientSuccessNotify(ctx context.Context, in *MasterToClientSuccessNotifyRequest, opts ...grpc.CallOption) (*MasterToClientSuccessNotifyResponse, error)
 	DownloadFile(ctx context.Context, in *DownloadRequest, opts ...grpc.CallOption) (*DownloadResponse, error)
 	MasterToDataKeeperReplica(ctx context.Context, in *MasterToDataKeeperReplicaRequest, opts ...grpc.CallOption) (*MasterToDataKeeperReplicaResponse, error)
+	NodeToNodeReplica(ctx context.Context, in *NodeToNodeReplicaRequest, opts ...grpc.CallOption) (*NodeToNodeReplicaResponse, error)
 }
 
 type servicesClient struct {
@@ -134,6 +136,15 @@ func (c *servicesClient) MasterToDataKeeperReplica(ctx context.Context, in *Mast
 	return out, nil
 }
 
+func (c *servicesClient) NodeToNodeReplica(ctx context.Context, in *NodeToNodeReplicaRequest, opts ...grpc.CallOption) (*NodeToNodeReplicaResponse, error) {
+	out := new(NodeToNodeReplicaResponse)
+	err := c.cc.Invoke(ctx, Services_NodeToNodeReplica_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // ServicesServer is the server API for Services service.
 // All implementations must embed UnimplementedServicesServer
 // for forward compatibility
@@ -145,6 +156,7 @@ type ServicesServer interface {
 	MasterToClientSuccessNotify(context.Context, *MasterToClientSuccessNotifyRequest) (*MasterToClientSuccessNotifyResponse, error)
 	DownloadFile(context.Context, *DownloadRequest) (*DownloadResponse, error)
 	MasterToDataKeeperReplica(context.Context, *MasterToDataKeeperReplicaRequest) (*MasterToDataKeeperReplicaResponse, error)
+	NodeToNodeReplica(context.Context, *NodeToNodeReplicaRequest) (*NodeToNodeReplicaResponse, error)
 	mustEmbedUnimplementedServicesServer()
 }
 
@@ -172,6 +184,9 @@ func (UnimplementedServicesServer) DownloadFile(context.Context, *DownloadReques
 }
 func (UnimplementedServicesServer) MasterToDataKeeperReplica(context.Context, *MasterToDataKeeperReplicaRequest) (*MasterToDataKeeperReplicaResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method MasterToDataKeeperReplica not implemented")
+}
+func (UnimplementedServicesServer) NodeToNodeReplica(context.Context, *NodeToNodeReplicaRequest) (*NodeToNodeReplicaResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method NodeToNodeReplica not implemented")
 }
 func (UnimplementedServicesServer) mustEmbedUnimplementedServicesServer() {}
 
@@ -320,6 +335,24 @@ func _Services_MasterToDataKeeperReplica_Handler(srv interface{}, ctx context.Co
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Services_NodeToNodeReplica_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(NodeToNodeReplicaRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ServicesServer).NodeToNodeReplica(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Services_NodeToNodeReplica_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ServicesServer).NodeToNodeReplica(ctx, req.(*NodeToNodeReplicaRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Services_ServiceDesc is the grpc.ServiceDesc for Services service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -350,6 +383,10 @@ var Services_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "MasterToDataKeeperReplica",
 			Handler:    _Services_MasterToDataKeeperReplica_Handler,
+		},
+		{
+			MethodName: "NodeToNodeReplica",
+			Handler:    _Services_NodeToNodeReplica_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{
