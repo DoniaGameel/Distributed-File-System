@@ -66,6 +66,7 @@ func (s *dataNodeServer) ClientToDataKeeperUpload(_ context.Context, req *pb.Cli
     notification := &pb.DataNodeNotificationRequest{
         FileName: fileName,
 		NodeId: nodeId,
+        PortNumber: port_number,
     }
 
     // Send notification to the master
@@ -80,9 +81,18 @@ func (s *dataNodeServer) ClientToDataKeeperUpload(_ context.Context, req *pb.Cli
     return &pb.ClientToDataKeeperUploadResponse{Success: true}, nil
 }
 
-var nodeId string
+// handle replica request
+func (s *dataNodeServer) MasterToDataKeeperReplica(ctx context.Context, req *pb.MasterToDataKeeperReplicaRequest) (*pb.MasterToDataKeeperReplicaResponse, error) {
+	fmt.Println("Received replica request .. node_id: ", req.IpAddress, " file_name: ", req.FileName, " port: ", req.Port)
+	return &pb.MasterToDataKeeperReplicaResponse{}, nil
+}
 
+var nodeId string
+var port_number string
 func main() {
+    fmt.Println("Enter port number: ")
+    fmt.Scanln(&port_number)
+    port_number = ":" + port_number
 	// establish the node as a client
 	conn, err := grpc.Dial("localhost:8080", grpc.WithInsecure())
 	if err != nil {
@@ -94,14 +104,14 @@ func main() {
 
 	// establish the node as a server
 	go func() {
-        lis, err := net.Listen("tcp", ":8081")
+        lis, err := net.Listen("tcp", port_number)
         if err != nil {
             fmt.Println("failed to listen:", err)
             return
         }
         s := grpc.NewServer()
         pb.RegisterServicesServer(s, &dataNodeServer{})
-        fmt.Println("Server started. Listening on port 8081...")
+        fmt.Println("Server started. Listening on port ", port_number, "...")
         if err := s.Serve(lis); err != nil {
             fmt.Println("failed to serve:", err)
         }

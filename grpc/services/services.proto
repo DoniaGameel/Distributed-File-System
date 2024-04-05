@@ -4,14 +4,6 @@ option go_package = "wireless_lab_1/grpc/services";
 
 package services;
 
-message TextRequest {
-    string text = 1;
-}
-
-message TextResponse {
-    string capitalized_text = 1;
-}
-
 message HeartbeatRequest{
     string node_id = 1;
 }
@@ -40,6 +32,7 @@ message clientToDataKeeperUploadResponse{
 message DataNodeNotificationRequest {
     string fileName = 1;
     string node_id = 2;
+    string port_number = 3;
 }
 
 message DataNodeNotificationResponse {
@@ -52,6 +45,16 @@ message MasterToClientSuccessNotifyRequest{
 
 message MasterToClientSuccessNotifyResponse{
     
+}
+
+message MasterToDataKeeperReplicaRequest{
+    string ip_address = 1;
+    string port = 2;
+    string file_name = 3;
+}
+
+message MasterToDataKeeperReplicaResponse{
+    bool success = 1;
 }
 
 message DownloadRequest {
@@ -69,12 +72,12 @@ message DownloadResponse {
 
 service Services {
     rpc TrackHeartbeat (stream HeartbeatRequest) returns (stream HeartbeatResponse) {}
-    rpc Hello(TextRequest) returns (TextResponse);
     rpc clientToMasterUpload(clientToMasterUploadRequest) returns (clientToMasterUploadResponse);
     rpc clientToDataKeeperUpload(clientToDataKeeperUploadRequest) returns (clientToDataKeeperUploadResponse);
     rpc dataNodeNotifyMaster(DataNodeNotificationRequest) returns (DataNodeNotificationResponse);
     rpc MasterToClientSuccessNotify(MasterToClientSuccessNotifyRequest) returns (MasterToClientSuccessNotifyResponse);
     rpc DownloadFile (DownloadRequest) returns (DownloadResponse);
+    rpc MasterToDataKeeperReplica (MasterToDataKeeperReplicaRequest) returns (MasterToDataKeeperReplicaResponse);
 }
 
 

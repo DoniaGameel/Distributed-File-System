@@ -20,11 +20,12 @@ const _ = grpc.SupportPackageIsVersion7
 
 const (
 	Services_TrackHeartbeat_FullMethodName              = "/services.Services/TrackHeartbeat"
-	Services_Hello_FullMethodName                       = "/services.Services/Hello"
 	Services_ClientToMasterUpload_FullMethodName        = "/services.Services/clientToMasterUpload"
 	Services_ClientToDataKeeperUpload_FullMethodName    = "/services.Services/clientToDataKeeperUpload"
 	Services_DataNodeNotifyMaster_FullMethodName        = "/services.Services/dataNodeNotifyMaster"
 	Services_MasterToClientSuccessNotify_FullMethodName = "/services.Services/MasterToClientSuccessNotify"
+	Services_DownloadFile_FullMethodName                = "/services.Services/DownloadFile"
+	Services_MasterToDataKeeperReplica_FullMethodName   = "/services.Services/MasterToDataKeeperReplica"
 )
 
 // ServicesClient is the client API for Services service.
@@ -32,11 +33,12 @@ const (
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type ServicesClient interface {
 	TrackHeartbeat(ctx context.Context, opts ...grpc.CallOption) (Services_TrackHeartbeatClient, error)
-	Hello(ctx context.Context, in *TextRequest, opts ...grpc.CallOption) (*TextResponse, error)
 	ClientToMasterUpload(ctx context.Context, in *ClientToMasterUploadRequest, opts ...grpc.CallOption) (*ClientToMasterUploadResponse, error)
 	ClientToDataKeeperUpload(ctx context.Context, in *ClientToDataKeeperUploadRequest, opts ...grpc.CallOption) (*ClientToDataKeeperUploadResponse, error)
 	DataNodeNotifyMaster(ctx context.Context, in *DataNodeNotificationRequest, opts ...grpc.CallOption) (*DataNodeNotificationResponse, error)
 	MasterToClientSuccessNotify(ctx context.Context, in *MasterToClientSuccessNotifyRequest, opts ...grpc.CallOption) (*MasterToClientSuccessNotifyResponse, error)
+	DownloadFile(ctx context.Context, in *DownloadRequest, opts ...grpc.CallOption) (*DownloadResponse, error)
+	MasterToDataKeeperReplica(ctx context.Context, in *MasterToDataKeeperReplicaRequest, opts ...grpc.CallOption) (*MasterToDataKeeperReplicaResponse, error)
 }
 
 type servicesClient struct {
@@ -78,15 +80,6 @@ func (x *servicesTrackHeartbeatClient) Recv() (*HeartbeatResponse, error) {
 	return m, nil
 }
 
-func (c *servicesClient) Hello(ctx context.Context, in *TextRequest, opts ...grpc.CallOption) (*TextResponse, error) {
-	out := new(TextResponse)
-	err := c.cc.Invoke(ctx, Services_Hello_FullMethodName, in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
 func (c *servicesClient) ClientToMasterUpload(ctx context.Context, in *ClientToMasterUploadRequest, opts ...grpc.CallOption) (*ClientToMasterUploadResponse, error) {
 	out := new(ClientToMasterUploadResponse)
 	err := c.cc.Invoke(ctx, Services_ClientToMasterUpload_FullMethodName, in, out, opts...)
@@ -123,16 +116,35 @@ func (c *servicesClient) MasterToClientSuccessNotify(ctx context.Context, in *Ma
 	return out, nil
 }
 
+func (c *servicesClient) DownloadFile(ctx context.Context, in *DownloadRequest, opts ...grpc.CallOption) (*DownloadResponse, error) {
+	out := new(DownloadResponse)
+	err := c.cc.Invoke(ctx, Services_DownloadFile_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *servicesClient) MasterToDataKeeperReplica(ctx context.Context, in *MasterToDataKeeperReplicaRequest, opts ...grpc.CallOption) (*MasterToDataKeeperReplicaResponse, error) {
+	out := new(MasterToDataKeeperReplicaResponse)
+	err := c.cc.Invoke(ctx, Services_MasterToDataKeeperReplica_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // ServicesServer is the server API for Services service.
 // All implementations must embed UnimplementedServicesServer
 // for forward compatibility
 type ServicesServer interface {
 	TrackHeartbeat(Services_TrackHeartbeatServer) error
-	Hello(context.Context, *TextRequest) (*TextResponse, error)
 	ClientToMasterUpload(context.Context, *ClientToMasterUploadRequest) (*ClientToMasterUploadResponse, error)
 	ClientToDataKeeperUpload(context.Context, *ClientToDataKeeperUploadRequest) (*ClientToDataKeeperUploadResponse, error)
 	DataNodeNotifyMaster(context.Context, *DataNodeNotificationRequest) (*DataNodeNotificationResponse, error)
 	MasterToClientSuccessNotify(context.Context, *MasterToClientSuccessNotifyRequest) (*MasterToClientSuccessNotifyResponse, error)
+	DownloadFile(context.Context, *DownloadRequest) (*DownloadResponse, error)
+	MasterToDataKeeperReplica(context.Context, *MasterToDataKeeperReplicaRequest) (*MasterToDataKeeperReplicaResponse, error)
 	mustEmbedUnimplementedServicesServer()
 }
 
@@ -142,9 +154,6 @@ type UnimplementedServicesServer struct {
 
 func (UnimplementedServicesServer) TrackHeartbeat(Services_TrackHeartbeatServer) error {
 	return status.Errorf(codes.Unimplemented, "method TrackHeartbeat not implemented")
-}
-func (UnimplementedServicesServer) Hello(context.Context, *TextRequest) (*TextResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method Hello not implemented")
 }
 func (UnimplementedServicesServer) ClientToMasterUpload(context.Context, *ClientToMasterUploadRequest) (*ClientToMasterUploadResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ClientToMasterUpload not implemented")
@@ -157,6 +166,12 @@ func (UnimplementedServicesServer) DataNodeNotifyMaster(context.Context, *DataNo
 }
 func (UnimplementedServicesServer) MasterToClientSuccessNotify(context.Context, *MasterToClientSuccessNotifyRequest) (*MasterToClientSuccessNotifyResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method MasterToClientSuccessNotify not implemented")
+}
+func (UnimplementedServicesServer) DownloadFile(context.Context, *DownloadRequest) (*DownloadResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method DownloadFile not implemented")
+}
+func (UnimplementedServicesServer) MasterToDataKeeperReplica(context.Context, *MasterToDataKeeperReplicaRequest) (*MasterToDataKeeperReplicaResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method MasterToDataKeeperReplica not implemented")
 }
 func (UnimplementedServicesServer) mustEmbedUnimplementedServicesServer() {}
 
@@ -195,24 +210,6 @@ func (x *servicesTrackHeartbeatServer) Recv() (*HeartbeatRequest, error) {
 		return nil, err
 	}
 	return m, nil
-}
-
-func _Services_Hello_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(TextRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(ServicesServer).Hello(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: Services_Hello_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ServicesServer).Hello(ctx, req.(*TextRequest))
-	}
-	return interceptor(ctx, in, info, handler)
 }
 
 func _Services_ClientToMasterUpload_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
@@ -287,6 +284,42 @@ func _Services_MasterToClientSuccessNotify_Handler(srv interface{}, ctx context.
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Services_DownloadFile_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DownloadRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ServicesServer).DownloadFile(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Services_DownloadFile_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ServicesServer).DownloadFile(ctx, req.(*DownloadRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Services_MasterToDataKeeperReplica_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(MasterToDataKeeperReplicaRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ServicesServer).MasterToDataKeeperReplica(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Services_MasterToDataKeeperReplica_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ServicesServer).MasterToDataKeeperReplica(ctx, req.(*MasterToDataKeeperReplicaRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Services_ServiceDesc is the grpc.ServiceDesc for Services service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -294,10 +327,6 @@ var Services_ServiceDesc = grpc.ServiceDesc{
 	ServiceName: "services.Services",
 	HandlerType: (*ServicesServer)(nil),
 	Methods: []grpc.MethodDesc{
-		{
-			MethodName: "Hello",
-			Handler:    _Services_Hello_Handler,
-		},
 		{
 			MethodName: "clientToMasterUpload",
 			Handler:    _Services_ClientToMasterUpload_Handler,
@@ -313,6 +342,14 @@ var Services_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "MasterToClientSuccessNotify",
 			Handler:    _Services_MasterToClientSuccessNotify_Handler,
+		},
+		{
+			MethodName: "DownloadFile",
+			Handler:    _Services_DownloadFile_Handler,
+		},
+		{
+			MethodName: "MasterToDataKeeperReplica",
+			Handler:    _Services_MasterToDataKeeperReplica_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{

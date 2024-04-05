@@ -83,13 +83,13 @@ func (s *masterServer) monitorLiveness() {
 // handle client upload request
 func (s *masterServer) ClientToMasterUpload(ctx context.Context, req *pb.ClientToMasterUploadRequest) (*pb.ClientToMasterUploadResponse, error) {
 	fmt.Println("Received client request")
-	return &pb.ClientToMasterUploadResponse{IpAddress: "ip", Port: "8081"}, nil
+	return &pb.ClientToMasterUploadResponse{IpAddress: "ip", Port: "50002"}, nil
 }
 // handle datanode notification of receiving the file
 func (s *masterServer) DataNodeNotifyMaster(ctx context.Context, req *pb.DataNodeNotificationRequest) (*pb.DataNodeNotificationResponse, error) {
 	fileName := req.GetFileName()
 	nodeId := req.GetNodeId()
-	fmt.Println("")
+	port := req.GetPortNumber()
 	node, ok := s.nodes[nodeId]
     if !ok {
         fmt.Printf("Node with ID %s not found\n", nodeId)
@@ -125,7 +125,63 @@ func (s *masterServer) DataNodeNotifyMaster(ctx context.Context, req *pb.DataNod
         fmt.Println("Successfully notified client about success")
     }
 
+	// Choose two other nodes for replication
+    replicationNodes := make([]*nodeStatus, 0)
+    for _, otherNode := range s.nodes {
+        if otherNode != node && !containsFile(otherNode.filenames, fileName) {
+            replicationNodes = append(replicationNodes, otherNode)
+            if len(replicationNodes) >= 2 {
+                break
+            }
+        }
+    }
+
+	// Send replication requests to chosen nodes
+    for _, replicaNode := range replicationNodes {
+        // Implement replication request logic here
+        fmt.Printf("Sending replication request to node %s for file %s\n", replicaNode.id, fileName)
+		fmt.Println("Enter the port number of it ")
+		var node_port string
+		fmt.Scanln(&node_port)
+		
+		node_port = "localhost:" + node_port
+		replicaConn, err := grpc.Dial(node_port, grpc.WithInsecure())
+		if err != nil {
+			fmt.Println("Failed to connect to client:", err)
+			// Handle connection error (e.g., retry or log)
+			return nil, err
+		}
+		defer replicaConn.Close() // Ensure master connection is closed
+
+		replicaClient := pb.NewServicesClient(replicaConn)
+
+		// Prepare notification message
+		notification := &pb.MasterToDataKeeperReplicaRequest{
+			FileName: fileName,
+			IpAddress: nodeId,
+			Port: port,
+		}
+
+		// Send notification to the master
+		_, err = replicaClient.MasterToDataKeeperReplica(context.Background(), notification)
+		if err != nil {
+			fmt.Println("Error sending replica request:", err)
+			// Handle notification error (e.g., retry or log)
+		} else {
+			fmt.Println("Successfully sent replica request")
+		}
+	}
+
     return &pb.DataNodeNotificationResponse{}, nil
+}
+
+func containsFile(files []string, fileName string) bool {
+    for _, file := range files {
+        if file == fileName {
+            return true
+        }
+    }
+    return false
 }
 
 func main() {
