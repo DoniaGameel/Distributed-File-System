@@ -1,0 +1,13 @@
+data_nodes:
+  - id: "1"
+    port_1: 50002
+    port_2: 50003
+    port_3: 50004
+  - id: "2"
+    port_1: 50005
+    port_2: 50006
+    port_3: 50007
+  - id: "3"
+    port_1: 50008
+    port_2: 50009
+    port_3: 50010

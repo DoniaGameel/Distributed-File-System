@@ -27,6 +27,7 @@ const (
 	Services_DownloadFile_FullMethodName                = "/services.Services/DownloadFile"
 	Services_MasterToDataKeeperReplica_FullMethodName   = "/services.Services/MasterToDataKeeperReplica"
 	Services_NodeToNodeReplica_FullMethodName           = "/services.Services/NodeToNodeReplica"
+	Services_Register_FullMethodName                    = "/services.Services/Register"
 )
 
 // ServicesClient is the client API for Services service.
@@ -41,6 +42,7 @@ type ServicesClient interface {
 	DownloadFile(ctx context.Context, in *DownloadRequest, opts ...grpc.CallOption) (*DownloadResponse, error)
 	MasterToDataKeeperReplica(ctx context.Context, in *MasterToDataKeeperReplicaRequest, opts ...grpc.CallOption) (*MasterToDataKeeperReplicaResponse, error)
 	NodeToNodeReplica(ctx context.Context, in *NodeToNodeReplicaRequest, opts ...grpc.CallOption) (*NodeToNodeReplicaResponse, error)
+	Register(ctx context.Context, in *RegisterRequest, opts ...grpc.CallOption) (*RegisterResponse, error)
 }
 
 type servicesClient struct {
@@ -145,6 +147,15 @@ func (c *servicesClient) NodeToNodeReplica(ctx context.Context, in *NodeToNodeRe
 	return out, nil
 }
 
+func (c *servicesClient) Register(ctx context.Context, in *RegisterRequest, opts ...grpc.CallOption) (*RegisterResponse, error) {
+	out := new(RegisterResponse)
+	err := c.cc.Invoke(ctx, Services_Register_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // ServicesServer is the server API for Services service.
 // All implementations must embed UnimplementedServicesServer
 // for forward compatibility
@@ -157,6 +168,7 @@ type ServicesServer interface {
 	DownloadFile(context.Context, *DownloadRequest) (*DownloadResponse, error)
 	MasterToDataKeeperReplica(context.Context, *MasterToDataKeeperReplicaRequest) (*MasterToDataKeeperReplicaResponse, error)
 	NodeToNodeReplica(context.Context, *NodeToNodeReplicaRequest) (*NodeToNodeReplicaResponse, error)
+	Register(context.Context, *RegisterRequest) (*RegisterResponse, error)
 	mustEmbedUnimplementedServicesServer()
 }
 
@@ -187,6 +199,9 @@ func (UnimplementedServicesServer) MasterToDataKeeperReplica(context.Context, *M
 }
 func (UnimplementedServicesServer) NodeToNodeReplica(context.Context, *NodeToNodeReplicaRequest) (*NodeToNodeReplicaResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method NodeToNodeReplica not implemented")
+}
+func (UnimplementedServicesServer) Register(context.Context, *RegisterRequest) (*RegisterResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Register not implemented")
 }
 func (UnimplementedServicesServer) mustEmbedUnimplementedServicesServer() {}
 
@@ -353,6 +368,24 @@ func _Services_NodeToNodeReplica_Handler(srv interface{}, ctx context.Context, d
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Services_Register_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RegisterRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ServicesServer).Register(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Services_Register_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ServicesServer).Register(ctx, req.(*RegisterRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Services_ServiceDesc is the grpc.ServiceDesc for Services service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -387,6 +420,10 @@ var Services_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "NodeToNodeReplica",
 			Handler:    _Services_NodeToNodeReplica_Handler,
+		},
+		{
+			MethodName: "Register",
+			Handler:    _Services_Register_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{

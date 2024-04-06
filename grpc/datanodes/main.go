@@ -156,11 +156,10 @@ func (s *dataNodeServer) NodeToNodeReplica(ctx context.Context, req *pb.NodeToNo
 }
 
 var nodeId string
+var receivedPorts []string // Store received port numbers
 var port_number string
 func main() {
-    fmt.Println("Enter port number: ")
-    fmt.Scanln(&port_number)
-    port_number = ":" + port_number
+    
 	// establish the node as a client
 	conn, err := grpc.Dial("localhost:8080", grpc.WithInsecure())
 	if err != nil {
@@ -170,23 +169,21 @@ func main() {
 	defer conn.Close()
 	c := pb.NewServicesClient(conn)
 
-	// establish the node as a server
-	go func() {
-        lis, err := net.Listen("tcp", port_number)
-        if err != nil {
-            fmt.Println("failed to listen:", err)
-            return
-        }
-        s := grpc.NewServer()
-        pb.RegisterServicesServer(s, &dataNodeServer{})
-        fmt.Println("Server started. Listening on port ", port_number, "...")
-        if err := s.Serve(lis); err != nil {
-            fmt.Println("failed to serve:", err)
-        }
-    }()
-	// Read input from user
-	fmt.Print("Enter Node ID: ")
-	fmt.Scanln(&nodeId)
+    // Call the register RPC method
+    resp, err := c.Register(context.Background(), &pb.RegisterRequest{IpAddress: "localhost"})
+    if err != nil {
+        fmt.Println("Error calling Upload to master: ", err)
+        return
+    }
+
+    fmt.Println("Received ID: ", resp.GetNodeId())
+    nodeId := resp.GetNodeId()
+    receivedPorts = resp.GetPortNumbers() // Store port numbers
+
+    // establish the node as a server on the received ports
+    for _, port := range receivedPorts {
+        go connectToNode(port) // Start a goroutine for each connection
+    }
 
 	// Start a ticker that triggers sending heartbeat every 1 second
 	ticker := time.NewTicker(1 * time.Second)
@@ -215,4 +212,19 @@ func main() {
 		}
 		fmt.Println("Received HeartbeatResponse:", resp)
 	}
+}
+
+func connectToNode(port_number string) {
+    port_number = ":" + port_number
+    lis, err := net.Listen("tcp", port_number)
+        if err != nil {
+            fmt.Println("failed to listen:", err)
+            return
+        }
+        s := grpc.NewServer()
+        pb.RegisterServicesServer(s, &dataNodeServer{})
+        fmt.Println("Server started. Listening on port ", port_number, "...")
+        if err := s.Serve(lis); err != nil {
+            fmt.Println("failed to serve:", err)
+        }
 }

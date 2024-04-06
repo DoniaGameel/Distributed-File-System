@@ -66,6 +66,15 @@ message NodeToNodeReplicaResponse{
     bool success = 2;
 }
 
+message RegisterRequest {
+    string ip_address = 1;
+}
+
+message RegisterResponse {
+    string node_id = 1;
+    repeated string port_numbers = 2;
+}
+
 message DownloadRequest {
     string file_name = 1;
 }
@@ -88,6 +97,7 @@ service Services {
     rpc DownloadFile (DownloadRequest) returns (DownloadResponse);
     rpc MasterToDataKeeperReplica (MasterToDataKeeperReplicaRequest) returns (MasterToDataKeeperReplicaResponse);
     rpc NodeToNodeReplica (NodeToNodeReplicaRequest) returns (NodeToNodeReplicaResponse);
+    rpc Register (RegisterRequest) returns (RegisterResponse);
 }
 
 
