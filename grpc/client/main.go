@@ -95,6 +95,7 @@ func main() {
 		resp_data, err := client_2.ClientToDataKeeperUpload(context.Background(), &pb.ClientToDataKeeperUploadRequest{
 			FileName: file_name,
 			FileContent: fileContent,
+			Port: PortNumber,
 		})
 		if err != nil {
 			fmt.Println("Error calling Upload to data node: ", err)

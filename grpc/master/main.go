@@ -34,6 +34,7 @@ type nodeStatus struct {
 	mutex       sync.Mutex
 	ipAddress   string
 	portNumbers []string
+	portStatus  []bool // Add a slice to store busy status for each port
 }
 
 type masterServer struct {
@@ -66,6 +67,7 @@ func (s *masterServer) LoadNodeConfig(filename string) error {
 }
 
 // Modify the Register method to save IP and assign ID
+// Modify the Register method to save IP and assign ID
 func (s *masterServer) Register(ctx context.Context, req *pb.RegisterRequest) (*pb.RegisterResponse, error) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
@@ -93,6 +95,7 @@ func (s *masterServer) Register(ctx context.Context, req *pb.RegisterRequest) (*
 		filenames:   []string{},
 		ipAddress:   req.GetIpAddress(),
 		portNumbers: make([]string, len(nodePorts)),
+		portStatus:  make([]bool, len(nodePorts)), // Initialize portStatus slice
 	}
 
 	// Convert port numbers to string and store them in newNode
@@ -105,6 +108,7 @@ func (s *masterServer) Register(ctx context.Context, req *pb.RegisterRequest) (*
 
 	return &pb.RegisterResponse{NodeId: nodeID, PortNumbers: newNode.portNumbers}, nil
 }
+
 
 func (s *masterServer) TrackHeartbeat(stream pb.Services_TrackHeartbeatServer) error {
 	for {
@@ -157,9 +161,47 @@ func (s *masterServer) monitorLiveness() {
 
 // handle client upload request
 func (s *masterServer) ClientToMasterUpload(ctx context.Context, req *pb.ClientToMasterUploadRequest) (*pb.ClientToMasterUploadResponse, error) {
-	fmt.Println("Received client request")
-	return &pb.ClientToMasterUploadResponse{IpAddress: "ip", Port: "50002"}, nil
+    fmt.Println("Received client request")
+
+    s.mutex.Lock()
+    defer s.mutex.Unlock()
+
+    // Choose a random node for upload, prioritizing non-busy ports
+    var chosenNode *nodeStatus
+    var chosenPortIndex int = -1
+
+    for _, node := range s.nodes {
+        if node.alive {
+            for i, portBusy := range node.portStatus {
+                if !portBusy { // Check for a non-busy port
+                    chosenNode = node
+                    chosenPortIndex = i
+                    break  // Exit inner loop if a non-busy port is found
+                }
+            }
+            if chosenNode != nil { // Exit outer loop if a non-busy node is found
+                break
+            }
+        }
+    }
+	
+    // Check if a live node with a non-busy port was found
+    if chosenNode == nil || chosenPortIndex == -1 {
+        fmt.Println("No available nodes or ports to upload to")
+        return nil, fmt.Errorf("no available nodes or ports to upload to")
+    }
+
+    // Mark chosen port as busy
+    chosenNode.portStatus[chosenPortIndex] = true
+
+    // Prepare response with chosen IP and port
+    return &pb.ClientToMasterUploadResponse{
+        IpAddress: chosenNode.ipAddress,
+        Port:      chosenNode.portNumbers[chosenPortIndex],
+    }, nil
 }
+
+
 
 // handle datanode notification of receiving the file
 func (s *masterServer) DataNodeNotifyMaster(ctx context.Context, req *pb.DataNodeNotificationRequest) (*pb.DataNodeNotificationResponse, error) {
@@ -201,11 +243,17 @@ func (s *masterServer) DataNodeNotifyMaster(ctx context.Context, req *pb.DataNod
 		fmt.Println("Successfully notified client about success")
 	}
 
-	// Choose two other nodes for replication
+	// Choose two other nodes for replication, considering non-busy ports
 	replicationNodes := make([]*nodeStatus, 0)
 	for _, otherNode := range s.nodes {
 		if otherNode != node && !containsFile(otherNode.filenames, fileName) {
-			replicationNodes = append(replicationNodes, otherNode)
+			// Check for non-busy ports before adding the node
+			for _, portBusy := range otherNode.portStatus {
+				if !portBusy {
+					replicationNodes = append(replicationNodes, otherNode)
+					break // Break out of the inner loop if a non-busy port is found
+				}
+			}
 			if len(replicationNodes) >= 2 {
 				break
 			}
@@ -214,42 +262,55 @@ func (s *masterServer) DataNodeNotifyMaster(ctx context.Context, req *pb.DataNod
 
 	// Send replication requests to chosen nodes
 	for _, replicaNode := range replicationNodes {
-		// Implement replication request logic here
-		fmt.Printf("Sending replication request to node %s for file %s\n", replicaNode.id, fileName)
-		fmt.Println("Enter the port number of it ")
-		var node_port string
-		fmt.Scanln(&node_port)
-
-		node_port = "localhost:" + node_port
-		replicaConn, err := grpc.Dial(node_port, grpc.WithInsecure())
-		if err != nil {
-			fmt.Println("Failed to connect to client:", err)
-			// Handle connection error (e.g., retry or log)
-			return nil, err
+		// Find the index of a non-busy port in the chosen replica node
+		var chosenPortIndex int = -1
+		for i, portBusy := range replicaNode.portStatus {
+			if !portBusy {
+				chosenPortIndex = i
+				break // Exit inner loop if a non-busy port is found
+			}
 		}
-		defer replicaConn.Close() // Ensure master connection is closed
 
+		// Check if a non-busy port was found
+		if chosenPortIndex == -1 {
+			fmt.Printf("No available non-busy ports on node %s for replication of %s\n", replicaNode.id, fileName)
+			continue // Skip to the next node if no non-busy port is available
+		}
+
+		// Construct the connection address using replicaNode information
+		replicaAddress := "localhost:" + replicaNode.portNumbers[chosenPortIndex]
+		fmt.Println("replicaAddress: ", replicaAddress)
+		// Establish connection to the chosen replica node
+		replicaConn, err := grpc.Dial(replicaAddress, grpc.WithInsecure())
+		if err != nil {
+			fmt.Println("Failed to connect to replica node:", err)
+			// Handle connection error (e.g., retry or log)
+			continue // Skip to the next node on connection failure
+		}
+		defer replicaConn.Close() // Ensure connection is closed after use
+
+		// Create a gRPC client for the chosen replica node
 		replicaClient := pb.NewServicesClient(replicaConn)
 
-		// Prepare notification message
+		// Prepare the replication request message
 		request := &pb.MasterToDataKeeperReplicaRequest{
 			FileName:  fileName,
-			IpAddress: "localhost",
-			Port:      port,
+			IpAddress: node.ipAddress, // Source node IP for replication
+			Port:      port,           // Source node port for replication
 		}
 
-		// Send notification to the master
+		// Send the replication request to the chosen replica node
 		_, err = replicaClient.MasterToDataKeeperReplica(context.Background(), request)
 		if err != nil {
 			fmt.Println("Error sending replica request:", err)
 			// Handle notification error (e.g., retry or log)
 		} else {
-			fmt.Println("Successfully sent replica request")
+			fmt.Printf("Successfully sent replica request to node %s for file %s\n", replicaNode.id, fileName)
 		}
 	}
 
 	return &pb.DataNodeNotificationResponse{}, nil
-}
+  }
 
 func containsFile(files []string, fileName string) bool {
 	for _, file := range files {

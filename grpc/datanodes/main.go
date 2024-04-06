@@ -66,9 +66,9 @@ func (s *dataNodeServer) ClientToDataKeeperUpload(_ context.Context, req *pb.Cli
     notification := &pb.DataNodeNotificationRequest{
         FileName: fileName,
 		NodeId: nodeId,
-        PortNumber: port_number,
+        PortNumber: req.GetPort(),
     }
-
+    fmt.Println("nodeId ", nodeId)
     // Send notification to the master
     _, err = masterClient.DataNodeNotifyMaster(context.Background(), notification)
     if err != nil {
@@ -85,7 +85,7 @@ func (s *dataNodeServer) ClientToDataKeeperUpload(_ context.Context, req *pb.Cli
 func (s *dataNodeServer) MasterToDataKeeperReplica(ctx context.Context, req *pb.MasterToDataKeeperReplicaRequest) (*pb.MasterToDataKeeperReplicaResponse, error) {
 	fmt.Println("Received replica request .. IpAddress: ", req.IpAddress, " file_name: ", req.FileName, " port: ", req.Port)
 	
-    node_port := req.IpAddress + req.Port
+    node_port := req.IpAddress + ":" + req.Port
     replicaConn, err := grpc.Dial(node_port, grpc.WithInsecure())
     if err != nil {
         fmt.Println("Failed to connect to node:", err)
@@ -157,7 +157,7 @@ func (s *dataNodeServer) NodeToNodeReplica(ctx context.Context, req *pb.NodeToNo
 
 var nodeId string
 var receivedPorts []string // Store received port numbers
-var port_number string
+
 func main() {
     
 	// establish the node as a client
@@ -172,12 +172,12 @@ func main() {
     // Call the register RPC method
     resp, err := c.Register(context.Background(), &pb.RegisterRequest{IpAddress: "localhost"})
     if err != nil {
-        fmt.Println("Error calling Upload to master: ", err)
+        fmt.Println("Error calling Register to master: ", err)
         return
     }
 
     fmt.Println("Received ID: ", resp.GetNodeId())
-    nodeId := resp.GetNodeId()
+    nodeId = resp.GetNodeId()
     receivedPorts = resp.GetPortNumbers() // Store port numbers
 
     // establish the node as a server on the received ports

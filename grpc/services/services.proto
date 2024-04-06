@@ -22,6 +22,7 @@ message clientToMasterUploadResponse{
 message clientToDataKeeperUploadRequest{
     string fileName = 1;
     bytes file_content = 2;
+    string port = 3;
 }
 
 message clientToDataKeeperUploadResponse{
