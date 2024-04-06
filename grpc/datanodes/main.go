@@ -114,7 +114,7 @@ func (s *dataNodeServer) MasterToDataKeeperReplica(ctx context.Context, req *pb.
     cwd, err := os.Getwd()
     if err != nil {
         // Handle error
-        return &pb.MasterToDataKeeperReplicaResponse{}, nil
+        return &pb.MasterToDataKeeperReplicaResponse{Success: false}, nil
     }
 
     // Specify the relative directory path (change this as needed)
@@ -127,7 +127,7 @@ func (s *dataNodeServer) MasterToDataKeeperReplica(ctx context.Context, req *pb.
     if _, err := os.Stat(directory); os.IsNotExist(err) {
         if err := os.MkdirAll(directory, 0755); err != nil {
             // Handle error
-            return &pb.MasterToDataKeeperReplicaResponse{}, nil
+            return &pb.MasterToDataKeeperReplicaResponse{Success: false}, nil
         }
     }
 
@@ -138,7 +138,7 @@ func (s *dataNodeServer) MasterToDataKeeperReplica(ctx context.Context, req *pb.
         // Handle error
         fmt.Println("Error saving the file")
     }
-    return &pb.MasterToDataKeeperReplicaResponse{}, nil
+    return &pb.MasterToDataKeeperReplicaResponse{Success: true}, nil
 }
 
 // handle download request

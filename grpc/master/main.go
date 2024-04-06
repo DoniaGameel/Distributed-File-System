@@ -94,7 +94,7 @@ func (s *masterServer) getSourceMachine(fileName string) (string, error) {
 func (s *masterServer) selectMachineToCopyTo(fileName string) (string, error) {
     // Iterate over available nodes and select one that does not contain the file
     for _, node := range s.nodes {
-        if !containsFile(node.filenames, fileName) && node.alive {
+        if !containsFile(node.id, fileName) && node.alive {
             
             // Return the ID of the selected node
             return node.id, nil
@@ -120,7 +120,6 @@ func (s *masterServer) getNodeIPAndPorts(nodeID string) (string, []string, error
 func (s *masterServer) notifyMachineDataTransfer(sourceMachine string, destinationMachine string, fileName string) {
     // Get IP and port numbers for source and destination machines
     sourceIP, sourcePortNumbers, err := s.getNodeIPAndPorts(sourceMachine)
-	fmt.Println("hello 34")
     if err != nil {
         fmt.Println("Error getting IP and port numbers for source machine:", err)
         return
@@ -156,6 +155,55 @@ func (s *masterServer) notifyMachineDataTransfer(sourceMachine string, destinati
 
     // Perform data transfer notification using selected ports
     fmt.Printf("Transfer initiated from %s:%s to %s:%s for file: %s\n", sourceIP, sourcePort, destIP, destPort, fileName)
+
+	// Construct the connection address using replicaNode information
+	replicaAddress := destIP + ":" + destPort
+	// Establish connection to the chosen replica node
+	replicaConn, err := grpc.Dial(replicaAddress, grpc.WithInsecure())
+	if err != nil {
+		fmt.Println("Failed to connect to replica node:", err)
+		return 
+	}
+	defer replicaConn.Close() // Ensure connection is closed after use
+
+	// Create a gRPC client for the chosen replica node
+	replicaClient := pb.NewServicesClient(replicaConn)
+
+	// Prepare the replication request message
+	request := &pb.MasterToDataKeeperReplicaRequest{
+		FileName:  fileName,
+		IpAddress: sourceIP, // Source node IP for replication
+		Port:      sourcePort,           // Source node port for replication
+	}
+
+	// Send the replication request to the chosen replica node
+	resp, err := replicaClient.MasterToDataKeeperReplica(context.Background(), request)
+	if err != nil {
+		fmt.Println("Error sending replica request:", err)
+		// Handle notification error (e.g., retry or log)
+	} else {
+		fmt.Printf("Successfully sent replica request to node %s for file %s\n", destinationMachine, fileName)
+	}
+	if resp.Success{
+		fileNodes.addFileNode(fileName, destinationMachine)
+		
+	}
+}
+
+// removeNodeFromFiles removes all entries associated with the given node ID from the fileNodes map
+func (s *masterServer) removeNodeFromFiles(nodeID string) {
+    fileNodes.Lock()
+    defer fileNodes.Unlock()
+
+    for fileName, nodeIDs := range fileNodes.data {
+        var updatedNodeIDs []string
+        for _, id := range nodeIDs {
+            if id != nodeID {
+                updatedNodeIDs = append(updatedNodeIDs, id)
+            }
+        }
+        fileNodes.data[fileName] = updatedNodeIDs
+    }
 }
 
 // Function to check replication based on the specified algorithm
@@ -298,6 +346,8 @@ func (s *masterServer) monitorLiveness() {
 			if time.Since(node.lastSeen) > 10*time.Second {
 				node.alive = false
 				fmt.Printf("Node with ID %s interrupted and marked down as non-responsive\n", nodeId)
+				// Remove the interrupted node from the fileNodes map
+                s.removeNodeFromFiles(nodeId)
 			}
 		}
 		s.mutex.Unlock()
@@ -358,7 +408,7 @@ func (s *masterServer) DownloadFile(ctx context.Context, req *pb.DownloadRequest
     var chosenPortIndex int = -1
 
     for _, node := range s.nodes {
-        if node.alive && containsFile(node.filenames, req.GetFileName()){
+        if node.alive && containsFile(node.id, req.GetFileName()){
             for i, portBusy := range node.portStatus {
                 if !portBusy { // Check for a non-busy port
                     chosenNode = node
@@ -409,7 +459,7 @@ func (s *masterServer) DataNodeNotifyMaster(ctx context.Context, req *pb.DataNod
 	node.filenames = append(node.filenames, fileName)
 	fmt.Printf("Data node %s notified the master about receiving file: %s\n", nodeId, fileName)
 
-	clientConn, err := grpc.Dial("localhost:50001", grpc.WithInsecure())
+	clientConn, err := grpc.Dial("localhost:50020", grpc.WithInsecure())
 	if err != nil {
 		fmt.Println("Failed to connect to client:", err)
 		// Handle connection error (e.g., retry or log)
@@ -434,7 +484,7 @@ func (s *masterServer) DataNodeNotifyMaster(ctx context.Context, req *pb.DataNod
 	// Choose two other nodes for replication, considering non-busy ports
 	replicationNodes := make([]*nodeStatus, 0)
 	for _, otherNode := range s.nodes {
-		if otherNode != node && !containsFile(otherNode.filenames, fileName) {
+		if otherNode != node && !containsFile(otherNode.id, fileName) {
 			// Check for non-busy ports before adding the node
 			for _, portBusy := range otherNode.portStatus {
 				if !portBusy {
@@ -502,13 +552,17 @@ func (s *masterServer) DataNodeNotifyMaster(ctx context.Context, req *pb.DataNod
 	return &pb.DataNodeNotificationResponse{}, nil
 }
 
-func containsFile(files []string, fileName string) bool {
-	for _, file := range files {
-		if file == fileName {
-			return true
+func containsFile(NodeID string, fileName string) bool {
+	nodeIDs := fileNodes.getNodeIDs(fileName)
+	containsFile := false
+	for _, id := range nodeIDs {
+		if id == NodeID {
+			containsFile = true
+			break
 		}
 	}
-	return false
+
+	return containsFile
 }
 
 func main() {
@@ -531,7 +585,7 @@ func main() {
 
 	go server.monitorLiveness()
 	// Start replication check routine
-	//go server.checkReplication()
+	go server.checkReplication()
 
 	if err := s.Serve(lis); err != nil {
 		fmt.Println("failed to serve:", err)
