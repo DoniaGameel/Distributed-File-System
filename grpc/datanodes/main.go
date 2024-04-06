@@ -203,6 +203,7 @@ var nodeId string
 var receivedPorts []string // Store received port numbers
 
 func main() {
+    fmt.Println("Local IP ",getLocalIP())
     
 	// establish the node as a client
 	conn, err := grpc.Dial("localhost:8080", grpc.WithInsecure())
@@ -270,4 +271,19 @@ func connectToNode(port_number string) {
         if err := s.Serve(lis); err != nil {
             fmt.Println("failed to serve:", err)
         }
+}
+
+func getLocalIP() string{
+	addrs, err := net.InterfaceAddrs()
+	if err != nil {
+		fmt.Println("Error getting local IP address:", err)
+		return ""
+	}
+	for _, addr := range addrs {
+		if ipnet, ok := addr.(*net.IPNet); ok && !ipnet.IP.IsLoopback() && ipnet.IP.To4() != nil {
+			return ipnet.IP.String()
+		}
+	}
+	fmt.Println("Error: No non-loopback IP address found")
+	return ""
 }

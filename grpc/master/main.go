@@ -516,7 +516,7 @@ func (s *masterServer) DataNodeNotifyMaster(ctx context.Context, req *pb.DataNod
 		}
 
 		// Construct the connection address using replicaNode information
-		replicaAddress := "localhost:" + replicaNode.portNumbers[chosenPortIndex]
+		replicaAddress := replicaNode.ipAddress + ":" + replicaNode.portNumbers[chosenPortIndex]
 		// Establish connection to the chosen replica node
 		replicaConn, err := grpc.Dial(replicaAddress, grpc.WithInsecure())
 		if err != nil {
