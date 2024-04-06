@@ -215,7 +215,7 @@ func main() {
 	c := pb.NewServicesClient(conn)
 
     // Call the register RPC method
-    resp, err := c.Register(context.Background(), &pb.RegisterRequest{IpAddress: "localhost"})
+    resp, err := c.Register(context.Background(), &pb.RegisterRequest{IpAddress: getLocalIP()})
     if err != nil {
         fmt.Println("Error calling Register to master: ", err)
         return
