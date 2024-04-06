@@ -68,7 +68,6 @@ func (s *dataNodeServer) ClientToDataKeeperUpload(_ context.Context, req *pb.Cli
 		NodeId: nodeId,
         PortNumber: req.GetPort(),
     }
-    fmt.Println("nodeId ", nodeId)
     // Send notification to the master
     _, err = masterClient.DataNodeNotifyMaster(context.Background(), notification)
     if err != nil {
@@ -205,12 +204,11 @@ func main() {
 		}
 
 		// Receive and process responses from the stream
-		resp, err := stream.Recv()
+		_, err = stream.Recv()
 		if err != nil {
 			fmt.Println("Error receiving HeartbeatResponse:", err)
 			continue // Retry sending heartbeat on the next tick
 		}
-		fmt.Println("Received HeartbeatResponse:", resp)
 	}
 }
 

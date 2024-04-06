@@ -11,3 +11,15 @@ data_nodes:
     port_1: 50008
     port_2: 50009
     port_3: 50010
+  - id: "4"
+    port_1: 50011
+    port_2: 50012
+    port_3: 50013
+  - id: "5"
+    port_1: 50014
+    port_2: 50015
+    port_3: 50016
+  - id: "6"
+    port_1: 50017
+    port_2: 50018
+    port_3: 50019

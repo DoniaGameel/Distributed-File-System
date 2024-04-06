@@ -50,6 +50,151 @@ func (s *masterServer) mustEmbedUnimplementedServicesServer() {
 	panic("unimplemented")
 }
 
+type fileNodesMap struct {
+    sync.RWMutex
+    data map[string][]string // Map to store file names and corresponding node IDs
+}
+
+// Initialize the map
+func newFileNodesMap() *fileNodesMap {
+    return &fileNodesMap{
+        data: make(map[string][]string),
+    }
+}
+
+// Add a file and its corresponding node ID to the map
+func (m *fileNodesMap) addFileNode(fileName string, nodeID string) {
+    m.Lock()
+    defer m.Unlock()
+    m.data[fileName] = append(m.data[fileName], nodeID)
+}
+
+// Get the list of node IDs associated with a file
+func (m *fileNodesMap) getNodeIDs(fileName string) []string {
+    m.RLock()
+    defer m.RUnlock()
+    return m.data[fileName]
+}
+
+// Initialize file-node map
+var fileNodes = newFileNodesMap()
+
+func (s *masterServer) getSourceMachine(fileName string) (string, error) {
+    // Get the list of node IDs associated with the file from the fileNodes map
+    nodeIDs := fileNodes.getNodeIDs(fileName)
+
+    if len(nodeIDs) == 0 {
+        return "", fmt.Errorf("file %s not found or not stored on any node", fileName)
+    }
+
+    // For simplicity, return the first node ID where the file is stored
+    return nodeIDs[0], nil
+}
+
+func (s *masterServer) selectMachineToCopyTo(fileName string) (string, error) {
+    // Iterate over available nodes and select one that does not contain the file
+    for _, node := range s.nodes {
+        if !containsFile(node.filenames, fileName) && node.alive {
+            
+            // Return the ID of the selected node
+            return node.id, nil
+        }
+    }
+
+    // If no suitable node is found, return an error
+    return "", fmt.Errorf("no available machine found to copy the file")
+}
+
+
+func (s *masterServer) getNodeIPAndPorts(nodeID string) (string, []string, error) {
+    // Search for the node with the provided ID
+    node, ok := s.nodes[nodeID]
+    if !ok {
+        return "", nil, fmt.Errorf("node with ID %s not found", nodeID)
+    }
+
+    // Return the IP address and port numbers of the node
+    return node.ipAddress, node.portNumbers, nil
+}
+
+func (s *masterServer) notifyMachineDataTransfer(sourceMachine string, destinationMachine string, fileName string) {
+    // Get IP and port numbers for source and destination machines
+    sourceIP, sourcePortNumbers, err := s.getNodeIPAndPorts(sourceMachine)
+	fmt.Println("hello 34")
+    if err != nil {
+        fmt.Println("Error getting IP and port numbers for source machine:", err)
+        return
+    }
+
+    destIP, destPortNumbers, err := s.getNodeIPAndPorts(destinationMachine)
+    if err != nil {
+        fmt.Println("Error getting IP and port numbers for destination machine:", err)
+        return
+    }
+
+    // Find non-busy ports for both source and destination machines
+    var sourcePort, destPort string
+    for i, portBusy := range s.nodes[sourceMachine].portStatus {
+        if !portBusy {
+            sourcePort = sourcePortNumbers[i]
+            break
+        }
+    }
+
+    for i, portBusy := range s.nodes[destinationMachine].portStatus {
+        if !portBusy {
+            destPort = destPortNumbers[i]
+            break
+        }
+    }
+
+    // Check if both source and destination ports are found
+    if sourcePort == "" || destPort == "" {
+        fmt.Println("No available non-busy ports for source or destination machines")
+        return
+    }
+
+    // Perform data transfer notification using selected ports
+    fmt.Printf("Transfer initiated from %s:%s to %s:%s for file: %s\n", sourceIP, sourcePort, destIP, destPort, fileName)
+}
+
+// Function to check replication based on the specified algorithm
+func (s *masterServer) checkReplication() {
+    ticker := time.NewTicker(10 * time.Second)
+    defer ticker.Stop()
+    for range ticker.C {
+        s.mutex.Lock()
+        for fileName := range fileNodes.data {
+            // Get list of node IDs associated with the file
+            nodeIDs := fileNodes.getNodeIDs(fileName)
+			fmt.Println("file name", fileName)
+			fmt.Println("len(nodeIDs)", len(nodeIDs))
+            if len(nodeIDs) < 3 {
+                // Get source machine for replication
+                sourceMachine, err := s.getSourceMachine(fileName)
+				if(err != nil){
+					fmt.Println("Error getting the source Machine ", err)
+				}
+                // Continue replication until the file is replicated on at least 3 alive data nodes
+                for len(nodeIDs) < 3 {
+                    // Select destination machine for replication
+                    destinationMachine, err := s.selectMachineToCopyTo(fileName)
+					if(err != nil){
+						fmt.Println("Error getting a destination Machine ", err)
+					}
+                    // Notify data transfer
+                    s.notifyMachineDataTransfer(sourceMachine, destinationMachine, fileName)
+                    // Update fileNodes map with replicated node ID
+                    fileNodes.addFileNode(fileName, destinationMachine)
+                    // Get updated list of node IDs associated with the file
+                    nodeIDs = fileNodes.getNodeIDs(fileName)
+                }
+            }
+        }
+        s.mutex.Unlock()
+    }
+}
+
 // LoadNodeConfig loads node configuration from the given YAML file
 func (s *masterServer) LoadNodeConfig(filename string) error {
 	data, err := ioutil.ReadFile(filename)
@@ -66,7 +211,7 @@ func (s *masterServer) LoadNodeConfig(filename string) error {
     return nil
 }
 
-// Modify the Register method to save IP and assign ID
+
 // Modify the Register method to save IP and assign ID
 func (s *masterServer) Register(ctx context.Context, req *pb.RegisterRequest) (*pb.RegisterResponse, error) {
 	s.mutex.Lock()
@@ -207,6 +352,8 @@ func (s *masterServer) ClientToMasterUpload(ctx context.Context, req *pb.ClientT
 func (s *masterServer) DataNodeNotifyMaster(ctx context.Context, req *pb.DataNodeNotificationRequest) (*pb.DataNodeNotificationResponse, error) {
 	fileName := req.GetFileName()
 	nodeId := req.GetNodeId()
+	// Update fileNodes map with file-node association
+    fileNodes.addFileNode(fileName, nodeId)
 	port := req.GetPortNumber()
 	node, ok := s.nodes[nodeId]
 	if !ok {
@@ -279,7 +426,6 @@ func (s *masterServer) DataNodeNotifyMaster(ctx context.Context, req *pb.DataNod
 
 		// Construct the connection address using replicaNode information
 		replicaAddress := "localhost:" + replicaNode.portNumbers[chosenPortIndex]
-		fmt.Println("replicaAddress: ", replicaAddress)
 		// Establish connection to the chosen replica node
 		replicaConn, err := grpc.Dial(replicaAddress, grpc.WithInsecure())
 		if err != nil {
@@ -300,17 +446,20 @@ func (s *masterServer) DataNodeNotifyMaster(ctx context.Context, req *pb.DataNod
 		}
 
 		// Send the replication request to the chosen replica node
-		_, err = replicaClient.MasterToDataKeeperReplica(context.Background(), request)
+		resp, err := replicaClient.MasterToDataKeeperReplica(context.Background(), request)
 		if err != nil {
 			fmt.Println("Error sending replica request:", err)
 			// Handle notification error (e.g., retry or log)
 		} else {
 			fmt.Printf("Successfully sent replica request to node %s for file %s\n", replicaNode.id, fileName)
 		}
+		if resp.Success{
+			fileNodes.addFileNode(fileName, replicaNode.id)
+		}
 	}
 
 	return &pb.DataNodeNotificationResponse{}, nil
-  }
+}
 
 func containsFile(files []string, fileName string) bool {
 	for _, file := range files {
@@ -340,6 +489,8 @@ func main() {
 	fmt.Println("Server started. Listening on port 8080...")
 
 	go server.monitorLiveness()
+	// Start replication check routine
+	//go server.checkReplication()
 
 	if err := s.Serve(lis); err != nil {
 		fmt.Println("failed to serve:", err)
