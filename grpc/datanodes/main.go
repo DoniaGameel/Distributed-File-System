@@ -141,6 +141,51 @@ func (s *dataNodeServer) MasterToDataKeeperReplica(ctx context.Context, req *pb.
     return &pb.MasterToDataKeeperReplicaResponse{}, nil
 }
 
+// handle download request
+func (s *dataNodeServer) ClientToDataKeeperDownload(ctx context.Context, req *pb.ClientToDataKeeperDownloadRequest) (*pb.ClientToDataKeeperDownloadResponse, error) {
+    fmt.Println("Received download request")
+    file_name := req.GetFileName()
+    
+    // Get the current working directory of the project
+    cwd, err := os.Getwd()
+    if err != nil {
+        // Handle error
+        fmt.Println("Error getting current working directory:", err)
+        return &pb.ClientToDataKeeperDownloadResponse{Success: false}, err
+    }
+
+    // Specify the relative directory path
+    relativeDir := "copied_" + nodeId
+    
+    // Join the current working directory with the relative directory path
+    directory := filepath.Join(cwd, relativeDir)
+
+    // Join the directory with the file name to get the full file path
+    filePath := filepath.Join(directory, file_name)
+
+    // Check if the file exists
+    _, err = os.Stat(filePath)
+    if err != nil {
+        if os.IsNotExist(err) {
+            fmt.Println("File does not exist:", err)
+        } else {
+            fmt.Println("Error checking file status:", err)
+        }
+        return &pb.ClientToDataKeeperDownloadResponse{Success: false}, err
+    }
+
+    // Read the file content
+    file_content, err := os.ReadFile(filePath)
+    if err != nil {
+        // Handle error
+        fmt.Println("Error reading the file:", err)
+        return &pb.ClientToDataKeeperDownloadResponse{Success: false}, err
+    }
+
+    return &pb.ClientToDataKeeperDownloadResponse{FileContent: file_content, Success: true}, nil
+}
+
+
 // handle replication request
 func (s *dataNodeServer) NodeToNodeReplica(ctx context.Context, req *pb.NodeToNodeReplicaRequest) (*pb.NodeToNodeReplicaResponse, error) {
 	fmt.Println("Received replica request")

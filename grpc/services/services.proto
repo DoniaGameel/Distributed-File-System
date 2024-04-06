@@ -25,9 +25,18 @@ message clientToDataKeeperUploadRequest{
     string port = 3;
 }
 
+
 message clientToDataKeeperUploadResponse{
     bool success = 1;
-    
+}
+
+message clientToDataKeeperDownloadRequest{
+    string fileName = 1;
+}
+
+message clientToDataKeeperDownloadResponse{
+    bytes file_content = 1;
+    bool success = 2;
 }
 
 message DataNodeNotificationRequest {
@@ -81,12 +90,8 @@ message DownloadRequest {
 }
 
 message DownloadResponse {
-    repeated Machine machine_list = 1;
-
-    message Machine {
-        string ip_address = 1;
-        string port = 2;
-    }
+    string ip_address = 1;
+    string port = 2;
 }
 
 service Services {
@@ -99,6 +104,7 @@ service Services {
     rpc MasterToDataKeeperReplica (MasterToDataKeeperReplicaRequest) returns (MasterToDataKeeperReplicaResponse);
     rpc NodeToNodeReplica (NodeToNodeReplicaRequest) returns (NodeToNodeReplicaResponse);
     rpc Register (RegisterRequest) returns (RegisterResponse);
+    rpc clientToDataKeeperDownload (clientToDataKeeperDownloadRequest) returns (clientToDataKeeperDownloadResponse);
 }
 
 

@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"io/ioutil"
 	"net"
 	"os"
 	"sync"
@@ -39,14 +40,14 @@ func main() {
 
     // Establish a port for the client to listen on
     go func() {
-        lis, err := net.Listen("tcp", ":50001")
+        lis, err := net.Listen("tcp", ":50020")
         if err != nil {
             fmt.Println("failed to listen:", err)
             return
         }
         s := grpc.NewServer()
         pb.RegisterServicesServer(s, &clientListener{}) // Register clientListener without WaitGroup
-        fmt.Println("Client is Listening on port 50001...")
+        fmt.Println("Client is Listening on port 50020...")
         if err := s.Serve(lis); err != nil {
             fmt.Println("failed to serve:", err)
         }
@@ -79,8 +80,9 @@ func main() {
 		fmt.Println("Received Upload Response from master:", resp)
 		//IpAddress := resp.GetIpAddress()
 		PortNumber := resp.GetPort()
+		ipAddress := resp.GetIpAddress()
 	
-		connection_port := "localhost:" + PortNumber
+		connection_port := ipAddress + ":"+ PortNumber
 		conn_data, err := grpc.Dial(connection_port, grpc.WithInsecure())
 		if err != nil {
 			fmt.Println("did not connect:", err)
@@ -112,7 +114,44 @@ func main() {
 		
 	} else if req_type ==2 {
 		// download logic
-		fmt.Println("You requested type 2.")
+		// Call the RPC method
+		resp, err := c.DownloadFile(context.Background(), &pb.DownloadRequest{FileName: file_name})
+		if err != nil {
+			fmt.Println("Error calling download: ", err)
+			return
+		}
+		fmt.Println("Received download Response from master:", resp)
+		PortNumber := resp.GetPort()
+		ipAddress := resp.GetIpAddress()
+
+		connection_port := ipAddress + ":"+ PortNumber
+		conn_data, err := grpc.Dial(connection_port, grpc.WithInsecure())
+		if err != nil {
+			fmt.Println("did not connect:", err)
+			return
+		}
+		defer conn_data.Close()
+	
+		// Create a client instance
+		client_2 := pb.NewServicesClient(conn_data)
+
+		resp_data, err := client_2.ClientToDataKeeperDownload(context.Background(), &pb.ClientToDataKeeperDownloadRequest{
+			FileName: file_name,
+		})
+		if err != nil {
+			fmt.Println("Error calling download from data node: ", err)
+			return
+		}
+		fmt.Println("Successfully downloaded from the datanode:")
+
+		err = ioutil.WriteFile(file_name,resp_data.GetFileContent(), 0644)
+		if err != nil {
+			// Handle error
+			fmt.Println("Error saving the file")
+		}
+
+
+
 	} else {
 		fmt.Println("Unknown request type:", req_type)
 		return

@@ -28,6 +28,7 @@ const (
 	Services_MasterToDataKeeperReplica_FullMethodName   = "/services.Services/MasterToDataKeeperReplica"
 	Services_NodeToNodeReplica_FullMethodName           = "/services.Services/NodeToNodeReplica"
 	Services_Register_FullMethodName                    = "/services.Services/Register"
+	Services_ClientToDataKeeperDownload_FullMethodName  = "/services.Services/clientToDataKeeperDownload"
 )
 
 // ServicesClient is the client API for Services service.
@@ -43,6 +44,7 @@ type ServicesClient interface {
 	MasterToDataKeeperReplica(ctx context.Context, in *MasterToDataKeeperReplicaRequest, opts ...grpc.CallOption) (*MasterToDataKeeperReplicaResponse, error)
 	NodeToNodeReplica(ctx context.Context, in *NodeToNodeReplicaRequest, opts ...grpc.CallOption) (*NodeToNodeReplicaResponse, error)
 	Register(ctx context.Context, in *RegisterRequest, opts ...grpc.CallOption) (*RegisterResponse, error)
+	ClientToDataKeeperDownload(ctx context.Context, in *ClientToDataKeeperDownloadRequest, opts ...grpc.CallOption) (*ClientToDataKeeperDownloadResponse, error)
 }
 
 type servicesClient struct {
@@ -156,6 +158,15 @@ func (c *servicesClient) Register(ctx context.Context, in *RegisterRequest, opts
 	return out, nil
 }
 
+func (c *servicesClient) ClientToDataKeeperDownload(ctx context.Context, in *ClientToDataKeeperDownloadRequest, opts ...grpc.CallOption) (*ClientToDataKeeperDownloadResponse, error) {
+	out := new(ClientToDataKeeperDownloadResponse)
+	err := c.cc.Invoke(ctx, Services_ClientToDataKeeperDownload_FullMethodName, in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // ServicesServer is the server API for Services service.
 // All implementations must embed UnimplementedServicesServer
 // for forward compatibility
@@ -169,6 +180,7 @@ type ServicesServer interface {
 	MasterToDataKeeperReplica(context.Context, *MasterToDataKeeperReplicaRequest) (*MasterToDataKeeperReplicaResponse, error)
 	NodeToNodeReplica(context.Context, *NodeToNodeReplicaRequest) (*NodeToNodeReplicaResponse, error)
 	Register(context.Context, *RegisterRequest) (*RegisterResponse, error)
+	ClientToDataKeeperDownload(context.Context, *ClientToDataKeeperDownloadRequest) (*ClientToDataKeeperDownloadResponse, error)
 	mustEmbedUnimplementedServicesServer()
 }
 
@@ -202,6 +214,9 @@ func (UnimplementedServicesServer) NodeToNodeReplica(context.Context, *NodeToNod
 }
 func (UnimplementedServicesServer) Register(context.Context, *RegisterRequest) (*RegisterResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Register not implemented")
+}
+func (UnimplementedServicesServer) ClientToDataKeeperDownload(context.Context, *ClientToDataKeeperDownloadRequest) (*ClientToDataKeeperDownloadResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ClientToDataKeeperDownload not implemented")
 }
 func (UnimplementedServicesServer) mustEmbedUnimplementedServicesServer() {}
 
@@ -386,6 +401,24 @@ func _Services_Register_Handler(srv interface{}, ctx context.Context, dec func(i
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Services_ClientToDataKeeperDownload_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ClientToDataKeeperDownloadRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ServicesServer).ClientToDataKeeperDownload(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Services_ClientToDataKeeperDownload_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ServicesServer).ClientToDataKeeperDownload(ctx, req.(*ClientToDataKeeperDownloadRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Services_ServiceDesc is the grpc.ServiceDesc for Services service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -424,6 +457,10 @@ var Services_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "Register",
 			Handler:    _Services_Register_Handler,
+		},
+		{
+			MethodName: "clientToDataKeeperDownload",
+			Handler:    _Services_ClientToDataKeeperDownload_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{

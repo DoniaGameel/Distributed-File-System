@@ -346,6 +346,47 @@ func (s *masterServer) ClientToMasterUpload(ctx context.Context, req *pb.ClientT
     }, nil
 }
 
+// handle client download request
+func (s *masterServer) DownloadFile(ctx context.Context, req *pb.DownloadRequest) (*pb.DownloadResponse, error) {
+    fmt.Println("Received client download request")
+
+    s.mutex.Lock()
+    defer s.mutex.Unlock()
+
+    // Choose a random node to download from, prioritizing non-busy ports
+    var chosenNode *nodeStatus
+    var chosenPortIndex int = -1
+
+    for _, node := range s.nodes {
+        if node.alive && containsFile(node.filenames, req.GetFileName()){
+            for i, portBusy := range node.portStatus {
+                if !portBusy { // Check for a non-busy port
+                    chosenNode = node
+                    chosenPortIndex = i
+                    break  // Exit inner loop if a non-busy port is found
+                }
+            }
+            if chosenNode != nil { // Exit outer loop if a non-busy node is found
+                break
+            }
+        }
+    }
+	
+    // Check if a live node with a non-busy port was found
+    if chosenNode == nil || chosenPortIndex == -1 {
+        fmt.Println("No available nodes or ports to download from")
+        return nil, fmt.Errorf("no available nodes or ports to download from")
+    }
+
+    // Mark chosen port as busy
+    chosenNode.portStatus[chosenPortIndex] = true
+
+    // Prepare response with chosen IP and port
+    return &pb.DownloadResponse{
+        IpAddress: chosenNode.ipAddress,
+        Port:      chosenNode.portNumbers[chosenPortIndex],
+    }, nil
+}
 
 
 // handle datanode notification of receiving the file
