@@ -38,3 +38,11 @@ Clients can request to download mp4 files from the Distributed File System follo
 1. The client sends a download request to the Master Tracker, specifying the desired file name.
 2. The Master Tracker responds with a list of IP addresses and ports from which the file can be downloaded.
 3. The client initiates parallel requests to download the file from each provided port, ensuring efficient data retrieval.
+
+
+## Contributoes:
+[Donia Gameel](https://github.com/DoniaGameel)
+
+[Heba Ashraf](https://github.com/hebaashraf21)
+
+[Shaza Mohammed](https://github.com/ShazaMohamed)
