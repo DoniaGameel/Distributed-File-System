@@ -52,7 +52,7 @@ func (s *dataNodeServer) ClientToDataKeeperUpload(_ context.Context, req *pb.Cli
         return &pb.ClientToDataKeeperUploadResponse{Success: false}, err
     }
     fmt.Println("Received file:", fileName)
-	masterConn, err := grpc.Dial("localhost:8080", grpc.WithInsecure())
+	masterConn, err := grpc.Dial("localhost:8081", grpc.WithInsecure())
     if err != nil {
         fmt.Println("Failed to connect to master:", err)
         // Handle connection error (e.g., retry or log)
@@ -206,7 +206,7 @@ func main() {
     fmt.Println("Local IP ",getLocalIP())
     
 	// establish the node as a client
-	conn, err := grpc.Dial("localhost:8080", grpc.WithInsecure())
+	conn, err := grpc.Dial("localhost:8081", grpc.WithInsecure())
 	if err != nil {
 		fmt.Println("did not connect:", err)
 		return

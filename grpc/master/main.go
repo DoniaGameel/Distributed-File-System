@@ -566,7 +566,7 @@ func containsFile(NodeID string, fileName string) bool {
 }
 
 func main() {
-	lis, err := net.Listen("tcp", ":8080")
+	lis, err := net.Listen("tcp", ":8081")
 	if err != nil {
 		fmt.Println("failed to listen:", err)
 		return
@@ -581,7 +581,7 @@ func main() {
 	}
 	s := grpc.NewServer()
 	pb.RegisterServicesServer(s, &server) // Register the existing server instance
-	fmt.Println("Server started. Listening on port 8080...")
+	fmt.Println("Server started. Listening on port 8081...")
 
 	go server.monitorLiveness()
 	// Start replication check routine
@@ -591,3 +591,4 @@ func main() {
 		fmt.Println("failed to serve:", err)
 	}
 }
+

@@ -25,7 +25,7 @@ func (l *clientListener) MasterToClientSuccessNotify(ctx context.Context, req *p
 func main() {
 
 	// Dial the master server at localhost:8080
-    conn, err := grpc.Dial("localhost:8080", grpc.WithInsecure())
+    conn, err := grpc.Dial("localhost:8081", grpc.WithInsecure())
     if err != nil {
         fmt.Println("did not connect:", err)
         return
